@@ -17,13 +17,8 @@ then frontier <- INSERT(new_node, frontier
 from collections import deque
 
 
-class NodeTree:
-    def __init__(self, parent):
-        self.parent = parent
-        self.children = [[]]
-
-    def add_child(self, child):
-        self.children.append(child)
+def add_node_path(element, input_list):
+    return [element] + input_list
 
 
 def jaunt(channels, current_pos):  # TODO check edge cases, what if two channels are specified twice; what if
@@ -38,7 +33,8 @@ def jaunt(channels, current_pos):  # TODO check edge cases, what if two channels
     return jaunt_to
 
 
-def next_position(world_grid, channels, current_pos, direction):
+# TODO can the world grid size be 0 0? should probable avoid a crash anyway
+def next_position(world_grid, channels, current_pos, direction):  # TODO: Change this whole monstrosity to a dictionary
     if direction == 'North':
         next_point = [current_pos[0], current_pos[1], current_pos[2] + 1]
     elif direction == 'Northeast':
@@ -71,10 +67,10 @@ def next_position(world_grid, channels, current_pos, direction):
 def breadth_first(world, channels, start_state, end_state, ):
     cost = 0
     frontier = deque([])
-    # TODO: add a path tree for the path.
-    path_tree = NodeTree(start_state)  # root
-    print(path_tree)
     node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
+    # TODO: add a path tree for the path.
+    path = add_node_path(node, [])
+    print(path)
     if start_state == end_state:
         create_output(node)
         return
@@ -87,23 +83,20 @@ def breadth_first(world, channels, start_state, end_state, ):
             print(no_solution)
             return create_output(no_solution)
         curr_node = frontier.pop()
-        # cost += 1
+        path = add_node_path(curr_node, path)
+        cost += 1
         explored.append(curr_node[0])
-        # print('explored = ', explored)
-        # print('current node = ', curr_node[0])
 
         for action in actions:
             child = [next_position(world, channels, curr_node[0], action),
                      curr_node[1] + 1]  # TODO: make cost a number (removing [] parenthesis)
-            # print('child = ', child[0])
+            path = add_node_path(child, path)
             # print('action = {}'.format(action))#Suggest: this way you can have insertions in the middle of the string
 
             # if not in_frontier and not in_explored:
             nodes_in_frontier = [n[0] for n in frontier]
 
             if child[0] not in explored and child[0] not in nodes_in_frontier:
-                # print('not in explored or frontier')
-                # print('nodes in frontier = ', nodes_in_frontier)
                 if child[0] == end_state:
                     solution_found = 'Got something'
                     print(solution_found, child)
@@ -113,7 +106,41 @@ def breadth_first(world, channels, start_state, end_state, ):
     return
 
 
-def uniform_cost():
+def uniform_cost(world, channels, start_state, end_state, ):
+    cost = 0
+    frontier = deque([])
+    node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
+    frontier.appendleft(node)
+    explored = []
+    # TODO: add a path tree for the path.
+    path = add_node_path(node, [])
+    print(path)
+    actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
+    while True:
+        if len(frontier) == 0:
+            no_solution = 'FAIL'
+            print(no_solution)
+            return create_output(no_solution)
+        curr_node = frontier.pop()
+        if curr_node == end_state:
+            solution_found = 'Got something'
+            print(solution_found, curr_node)
+            return create_output(solution_found)
+        path = add_node_path(curr_node, path)
+        explored.append(curr_node[0])
+        for action in actions:
+            child = [next_position(world, channels, curr_node[0], action),
+                     curr_node[1] + 1]  # TODO: correct the cost for ucs
+            path = add_node_path(child, path)
+            # print('action = {}'.format(action))#Suggest: this way you can have insertions in the middle of the string
+
+            # if not in_frontier and not in_explored:
+            nodes_in_frontier = [n[0] for n in frontier]
+
+            if child[0] not in explored and child[0] not in nodes_in_frontier:
+                frontier.appendleft(child)#TODO: insert in correct location
+            #elif chi
+
     return
 
 
@@ -170,8 +197,7 @@ while i < no_channels:
 if algorithm == "BFS":
     breadth_first(world, ch, start, end)
 elif algorithm == "UCS":
-    breadth_first(world, ch, start, end)
-    # uniform_cost()
+    uniform_cost(world, ch, start, end)
 elif algorithm == "A*":
     breadth_first(world, ch, start, end)
     # a_star()
