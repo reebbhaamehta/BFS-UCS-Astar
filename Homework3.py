@@ -21,6 +21,19 @@ def add_node_path(element, input_list):
     return [element] + input_list
 
 
+def get_root(path):
+    return path
+
+
+def get_path(input_list):
+    i = 0
+    out_list = []
+    for i in input_list:
+        #print[i]
+        out_list.append(get_root(i))
+    return out_list
+
+
 def jaunt(channels, current_pos):  # TODO check edge cases, what if two channels are specified twice; what if
     jaunt_to = current_pos
     for i in channels:
@@ -99,7 +112,8 @@ def breadth_first(world, channels, start_state, end_state, ):
             if child[0] not in explored and child[0] not in nodes_in_frontier:
                 if child[0] == end_state:
                     solution_found = 'Got something'
-                    print(solution_found, child)
+                    path = get_path(child[0])
+                    print(solution_found, child, path)
                     return create_output(solution_found)
                 frontier.appendleft(child)
                 path = add_node_path(child, path)
