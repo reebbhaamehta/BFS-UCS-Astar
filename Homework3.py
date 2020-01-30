@@ -90,7 +90,7 @@ def breadth_first(world, channels, start_state, end_state, ):
         for action in actions:
             child = [next_position(world, channels, curr_node[0], action),
                      curr_node[1] + 1]  # TODO: make cost a number (removing [] parenthesis)
-            path = add_node_path(child, path)
+
             # print('action = {}'.format(action))#Suggest: this way you can have insertions in the middle of the string
 
             # if not in_frontier and not in_explored:
@@ -102,6 +102,7 @@ def breadth_first(world, channels, start_state, end_state, ):
                     print(solution_found, child)
                     return create_output(solution_found)
                 frontier.appendleft(child)
+                path = add_node_path(child, path)
 
     return
 
