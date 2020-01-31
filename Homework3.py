@@ -100,7 +100,6 @@ def breadth_first(world_grid, channels, start_state, end_state):
                      curr_node[1] + 1]
             tree[str(child)] = curr_node
             # print('action = {}'.format(action))#Suggest: this way you can have insertions in the middle of the string
-
             # if not in_frontier and not in_explored:
             nodes_in_frontier = [n[0] for n in frontier]
 
@@ -111,15 +110,15 @@ def breadth_first(world_grid, channels, start_state, end_state):
                     path.append(child)
                     path.append(find_path(tree, child))
                     print(solution_found, child, path)
+                    print(len(tree))
                     return create_output(solution_found)
                 frontier.appendleft(child)
 
 
 def uniform_cost(world_grid, channels, start_state, end_state, ):
     cost = 0
-    frontier = deque([]) #TODO: change to a list
     node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
-    frontier.appendleft(node)
+    frontier = [node]
     explored = []
     # TODO: add a path tree for the path.
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
@@ -128,31 +127,40 @@ def uniform_cost(world_grid, channels, start_state, end_state, ):
             no_solution = 'FAIL'
             print(no_solution)
             return create_output(no_solution)
-        curr_node = frontier.pop()
-        if curr_node == end_state:
+        curr_node = frontier[0]
+        del frontier[0]
+        if curr_node[0] == end_state:
             solution_found = 'Got something'
             print(solution_found, curr_node)
             return create_output(solution_found)
 
         explored.append(curr_node[0])
         for action in actions:
-            child = [next_position(world_grid, channels, curr_node[0], action),
-                     curr_node[1] + 1]  # TODO: correct the cost for ucs
-
+            next_node = next_position(world_grid, channels, curr_node[0], action)
+            if action == 'North' or action == 'South' or action == 'East' or action == 'West':
+                cost = 10
+            elif action == 'Jaunt':
+                cost = abs(next_node[0] - curr_node[0][0])
+                if cost != 0:
+                    print("{}=current node year - ".format(curr_node[0][0]), "{}=next node year".format(next_node[0]),
+                          "= {} = cost".format(cost))
+            else:
+                cost = 14
+            child = [next_node, curr_node[1] + cost]  # TODO: correct the cost for ucs
             # print('action = {}'.format(action))#Suggest: this way you can have insertions in the middle of the string
-
             # if not in_frontier and not in_explored:
             nodes_in_frontier = [n[0] for n in frontier]
-
             if child[0] not in explored and child[0] not in nodes_in_frontier:
-                for n in frontier:
-                    if frontier[n[1]]<child[1]:
-                        frontier.appendleft(child)  # TODO: insert in correct location
-            elif child[0] in nodes_in_frontier:
-                index = frontier.index(child[0])
-                if frontier(index) > child[1]:
+                ind = len(frontier)
+                for i in frontier:
+                    if child[1] < i[1]:
+                        ind = frontier.index(i)
+                        break
+                frontier.insert(ind, child)
+            elif child in nodes_in_frontier:
+                index = frontier.index(child)
+                if frontier > child[1]:
                     frontier.insert(index, child)
-
 
 
 def a_star():
@@ -169,8 +177,6 @@ def create_output(out_list):
 file_Input = open("input.txt")
 lines = file_Input.readlines()
 file_Input.close()
-# with open('input.txt') as file_Input:
-#    lines = file_Input.readlines()
 
 algorithm = lines[0].strip()
 grid = lines[1].split()
@@ -202,7 +208,7 @@ while i < no_channels:
     single_channel = [int(i) for i in single_channel]
     ch.append(single_channel)
     i = i + 1
-# print(ch)
+#print(ch)
 
 if algorithm == "BFS":
     breadth_first(world, ch, start, end)
