@@ -1,6 +1,22 @@
 from collections import deque
 
 
+class TreeNode:
+    def __init__(self, node, prev_node):
+        self.node = node
+        self.parent = prev_node
+        self.children = []
+
+    def add_child(self, child):
+        self.children.append(child)
+
+    def __repr__(self):
+        return 'TreeNode (%s, %s)\n' % (self.node, self.children)
+
+    def return_parent(self):
+        return self.parent
+
+
 def jaunt(channels, current_pos):  # TODO check edge cases, what if two channels are specified twice; what if
     jaunt_to = current_pos
     for i in channels:
@@ -47,6 +63,7 @@ def next_position(world_grid, channels, current_pos, direction):
 
 
 def find_path(tree, child):
+    print(child)
     curr_parent = child  # tree[str(child)]
     path = list()
     while True:
@@ -62,6 +79,7 @@ def breadth_first(world_grid, channels, start_state, end_state):
     frontier = deque([])
     node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
     tree = {str(node): [None]}
+
     # TODO: test path.
     if start_state == end_state:
         create_output(node)
@@ -80,12 +98,12 @@ def breadth_first(world_grid, channels, start_state, end_state):
         for action in actions:
             child = [next_position(world_grid, channels, curr_node[0], action),
                      curr_node[1] + 1]
-            tree[str(child)] = curr_node
             # print('action = {}'.format(action))#Suggest: this way you can have insertions in the middle of the string
             # if not in_frontier and not in_explored:
             nodes_in_frontier = [n[0] for n in frontier]
 
             if child[0] not in explored and child[0] not in nodes_in_frontier:
+                tree[str(child)] = curr_node
                 if child[0] == end_state:
                     solution_found = 'Got something'
                     path = list()
@@ -93,6 +111,7 @@ def breadth_first(world_grid, channels, start_state, end_state):
                     path.append(find_path(tree, child))
                     print(solution_found, child, path)
                     print(len(tree))
+
                     return create_output(solution_found)
                 frontier.appendleft(child)
 
