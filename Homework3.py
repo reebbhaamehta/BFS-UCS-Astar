@@ -1,14 +1,13 @@
 from collections import deque
+import time
 
 
 def jaunt(channels, current_pos):  # TODO check edge cases, what if two channels are specified twice; what if
     jaunt_to = current_pos
     for i in channels:
         if current_pos == [i[0], i[1], i[2]]:
-            print('jaunt possible#1')
             jaunt_to = [i[3], i[1], i[2]]
         elif current_pos == [i[3], i[1], i[2]]:
-            print('jaunt possible#2')
             jaunt_to = [i[0], i[1], i[2]]
     return jaunt_to
 
@@ -47,7 +46,7 @@ def next_position(world_grid, channels, current_pos, direction):
 
 
 def find_path(tree, child):
-    curr_parent = child  # tree[str(child)]
+    curr_parent = child
     path = list()
     while True:
         path.append(tree[str(curr_parent)])
@@ -57,68 +56,85 @@ def find_path(tree, child):
     return path
 
 
+def calculate_heuristic(end_state, current_state):
+    current_cost = current_state[1]
+    estimated_future_cost = (abs(current_state[0][0] - end_state[0])) \
+                            + max(abs(current_state[0][1] - end_state[1]), abs(current_state[0][2] - end_state[2]))
+    fn = current_cost + estimated_future_cost
+    return fn
+
+
+def create_output(current_node, path):
+    file_output = open('output.txt', 'w')
+    if path == ['FAIL']:
+        file_output.write('FAIL')
+    else:
+        path.pop(len(path) - 1)
+        path.reverse()
+        path.append(current_node)
+        file_output.write(str(current_node[1]))
+        file_output.write('\n' + str(len(path)))
+        prev_cost = 0
+        for i in path:
+            file_output.write('\n' + str(i[0][0]) + ' ' + str(i[0][1]) + ' ' + str(i[0][2]) + ' ' + str(i[1] - prev_cost))
+            prev_cost = i[1]
+    file_output.close()
+
+
 def breadth_first(world_grid, channels, start_state, end_state):
     cost = 0
     frontier = deque([])
     node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
     tree = {str(node): [None]}
-    # TODO: test path.
+    frontier_nodes = []
+    # TODO: keep track of nodes in frontier as its own data structure
     if start_state == end_state:
-        create_output(node)
+        create_output(node, [node])
         return
     frontier.appendleft(node)
+    frontier_nodes.append(node[0])
     explored = []
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
         if len(frontier) == 0:
-            no_solution = 'FAIL'
-            print(no_solution)
-            return create_output(no_solution)
+            print("FAIL")
+            return create_output(curr_node, ['FAIL'])
         curr_node = frontier.pop()
-        cost += 1
+        temp = frontier_nodes.pop(0)
         explored.append(curr_node[0])
         for action in actions:
             child = [next_position(world_grid, channels, curr_node[0], action),
                      curr_node[1] + 1]
-            tree[str(child)] = curr_node
             # print('action = {}'.format(action))#Suggest: this way you can have insertions in the middle of the string
             # if not in_frontier and not in_explored:
-            nodes_in_frontier = [n[0] for n in frontier]
+            # nodes_in_frontier = [n[0] for n in frontier]
 
-            if child[0] not in explored and child[0] not in nodes_in_frontier:
+            if child[0] not in explored and child[0] not in frontier_nodes:
+                tree[str(child)] = curr_node
                 if child[0] == end_state:
-                    solution_found = 'Got something'
-                    path = list()
-                    path.append(child)
-                    path.append(find_path(tree, child))
-                    print(solution_found, child, path)
-                    print(len(tree))
-                    return create_output(solution_found)
+                    path = find_path(tree, child)
+                    return create_output(child, path)
                 frontier.appendleft(child)
+                frontier_nodes.append(child[0])
 
 
-def uniform_cost(world_grid, channels, start_state, end_state, ):
+def uniform_cost(world_grid, channels, start_state, end_state):
     cost = 0
     node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
     tree = {str(node): [None]}
     frontier = [node]
     explored = []
-    # TODO: add a path tree for the path.
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
         if len(frontier) == 0:
-            no_solution = 'FAIL'
-            return create_output(no_solution)
+            print(len(explored))
+            return create_output(curr_node, ['FAIL'])
         curr_node = frontier[0]
         del frontier[0]
         if curr_node[0] == end_state:
-            solution_found = 'Got something'
-            path = list()
-            path.append(curr_node)
-            path.append(find_path(tree, curr_node))
-            print(solution_found, curr_node, path)
-            print(len(tree))
-            return create_output(solution_found)
+            path = find_path(tree, curr_node)
+            print(len(explored))
+            return create_output(curr_node, path)
         explored.append(curr_node[0])
         for action in actions:
             next_node = next_position(world_grid, channels, curr_node[0], action)
@@ -126,12 +142,9 @@ def uniform_cost(world_grid, channels, start_state, end_state, ):
                 cost = 10
             elif action == 'Jaunt':
                 cost = abs(next_node[0] - curr_node[0][0])
-                if cost != 0:
-                    print("{}=current node year - ".format(curr_node[0][0]), "{}=next node year".format(next_node[0]),
-                          "= {} = cost".format(cost))
             else:
                 cost = 14
-            child = [next_node, curr_node[1] + cost]  # TODO: correct the cost for ucs
+            child = [next_node, curr_node[1] + cost]
             # if not in_frontier and not in_explored:
             nodes_in_frontier = [n[0] for n in frontier]
             if child[0] not in explored and child[0] not in nodes_in_frontier:
@@ -150,14 +163,50 @@ def uniform_cost(world_grid, channels, start_state, end_state, ):
 
 
 def a_star(world_grid, channels, start_state, end_state):
-    return
-
-
-def create_output(out_list):
-    file_output = open('output.txt', 'w')
-    file_output.write("You know how it goes. Slow learning" + '\n')
-    file_output.write(str(out_list))
-    file_output.close()
+    cost = 0
+    fn = 0
+    node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost, fn]
+    tree = {str(node): [None]}
+    frontier = [node]
+    explored = []
+    actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
+    while True:
+        if len(frontier) == 0:
+            print(len(explored))
+            return create_output(curr_node, ['FAIL'])
+        curr_node = frontier[0]
+        del frontier[0]
+        if curr_node[0] == end_state:
+            path = find_path(tree, curr_node)
+            print(len(explored))
+            return create_output(curr_node, path)
+        explored.append(curr_node[0])
+        for action in actions:
+            next_node = next_position(world_grid, channels, curr_node[0], action)
+            if action == 'North' or action == 'South' or action == 'East' or action == 'West':
+                cost = 10
+            elif action == 'Jaunt':
+                cost = abs(next_node[0] - curr_node[0][0])
+            else:
+                cost = 14
+            child = [next_node, curr_node[1] + cost, fn]
+            fn = calculate_heuristic(end_state, child)
+            child = [next_node, curr_node[1] + cost, fn]
+            # if not in_frontier and not in_explored:
+            nodes_in_frontier = [n[0] for n in frontier]
+            if child[0] not in explored and child[0] not in nodes_in_frontier:
+                ind = len(frontier)
+                for i in frontier:
+                    if child[2] < i[2]:
+                        ind = frontier.index(i)
+                        break
+                frontier.insert(ind, child)
+                tree[str(child)] = curr_node
+            elif child in nodes_in_frontier:
+                index = frontier.index(child)
+                if frontier > child[2]:
+                    frontier.insert(index, child)
+                    tree[str(child)] = curr_node
 
 
 file_Input = open("input.txt")
@@ -188,9 +237,12 @@ while i < no_channels:
     ch.append(single_channel)
     i = i + 1
 
+st = time.time()
 if algorithm == "BFS":
     breadth_first(world, ch, start, end)
 elif algorithm == "UCS":
     uniform_cost(world, ch, start, end)
 elif algorithm == "A*":
     a_star(world, ch, start, end)
+print("it took {}".format(time.time() - st))
+
