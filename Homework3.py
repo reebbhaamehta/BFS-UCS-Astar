@@ -1,5 +1,6 @@
 from collections import deque
 import time
+import bisect
 
 
 def jaunt(channels, current_pos):  # TODO check edge cases, what if two channels are specified twice; what if
@@ -76,9 +77,17 @@ def create_output(current_node, path):
         file_output.write('\n' + str(len(path)))
         prev_cost = 0
         for i in path:
-            file_output.write('\n' + str(i[0][0]) + ' ' + str(i[0][1]) + ' ' + str(i[0][2]) + ' ' + str(i[1] - prev_cost))
+            file_output.write(
+                '\n' + str(i[0][0]) + ' ' + str(i[0][1]) + ' ' + str(i[0][2]) + ' ' + str(i[1] - prev_cost))
             prev_cost = i[1]
     file_output.close()
+
+
+def index_explored(a, value):
+    i = bisect.bisect_left(a, value)
+    if i != len(a) and a[i] == value:
+        return i
+    return -1
 
 
 def breadth_first(world_grid, channels, start_state, end_state):
@@ -101,7 +110,7 @@ def breadth_first(world_grid, channels, start_state, end_state):
             return create_output(curr_node, ['FAIL'])
         curr_node = frontier.pop()
         temp = frontier_nodes.pop(0)
-        explored.append(curr_node[0])
+        bisect.insort(explored, curr_node[0])
         for action in actions:
             child = [next_position(world_grid, channels, curr_node[0], action),
                      curr_node[1] + 1]
@@ -109,7 +118,7 @@ def breadth_first(world_grid, channels, start_state, end_state):
             # if not in_frontier and not in_explored:
             # nodes_in_frontier = [n[0] for n in frontier]
 
-            if child[0] not in explored and child[0] not in frontier_nodes:
+            if child[0] not in frontier_nodes and index_explored(explored, child[0]) < 0:
                 tree[str(child)] = curr_node
                 if child[0] == end_state:
                     path = find_path(tree, child)
@@ -135,7 +144,7 @@ def uniform_cost(world_grid, channels, start_state, end_state):
             path = find_path(tree, curr_node)
             print(len(explored))
             return create_output(curr_node, path)
-        explored.append(curr_node[0])
+        bisect.insort(explored, curr_node[0])
         for action in actions:
             next_node = next_position(world_grid, channels, curr_node[0], action)
             if action == 'North' or action == 'South' or action == 'East' or action == 'West':
@@ -147,7 +156,7 @@ def uniform_cost(world_grid, channels, start_state, end_state):
             child = [next_node, curr_node[1] + cost]
             # if not in_frontier and not in_explored:
             nodes_in_frontier = [n[0] for n in frontier]
-            if child[0] not in explored and child[0] not in nodes_in_frontier:
+            if child[0] not in nodes_in_frontier and index_explored(explored, child[0]) < 0:
                 ind = len(frontier)
                 for i in frontier:
                     if child[1] < i[1]:
@@ -180,7 +189,7 @@ def a_star(world_grid, channels, start_state, end_state):
             path = find_path(tree, curr_node)
             print(len(explored))
             return create_output(curr_node, path)
-        explored.append(curr_node[0])
+        bisect.insort(explored, curr_node[0])
         for action in actions:
             next_node = next_position(world_grid, channels, curr_node[0], action)
             if action == 'North' or action == 'South' or action == 'East' or action == 'West':
@@ -194,7 +203,7 @@ def a_star(world_grid, channels, start_state, end_state):
             child = [next_node, curr_node[1] + cost, fn]
             # if not in_frontier and not in_explored:
             nodes_in_frontier = [n[0] for n in frontier]
-            if child[0] not in explored and child[0] not in nodes_in_frontier:
+            if child[0] not in nodes_in_frontier and index_explored(explored, child[0]) < 0:
                 ind = len(frontier)
                 for i in frontier:
                     if child[2] < i[2]:
@@ -237,6 +246,9 @@ while i < no_channels:
     ch.append(single_channel)
     i = i + 1
 
+#  create adjacency graph
+
+
 st = time.time()
 if algorithm == "BFS":
     breadth_first(world, ch, start, end)
@@ -245,4 +257,3 @@ elif algorithm == "UCS":
 elif algorithm == "A*":
     a_star(world, ch, start, end)
 print("it took {}".format(time.time() - st))
-

@@ -1,6 +1,5 @@
 from collections import deque
 import time
-import profile
 
 
 # @profile
@@ -86,7 +85,7 @@ def create_output(current_node, path):
     file_output.close()
 
 
-# @profile
+@profile
 def breadth_first(world_grid, channels, start_state, end_state):
     cost = 0
     frontier = deque([])
@@ -115,15 +114,16 @@ def breadth_first(world_grid, channels, start_state, end_state):
             # if not in_frontier and not in_explored:
             # nodes_in_frontier = [n[0] for n in frontier]
 
-            if child[0] not in explored and child[0] not in frontier_nodes:
-                tree[str(child)] = curr_node
-                if child[0] == end_state:
-                    path = find_path(tree, child)
-                    return create_output(child, path)
-                frontier.appendleft(child)
-                frontier_nodes.append(child[0])
+            if child[0] not in frontier_nodes:
+                if child[0] not in explored:
+                    tree[str(child)] = curr_node
+                    if child[0] == end_state:
+                        path = find_path(tree, child)
+                        return create_output(child, path)
+                    frontier.appendleft(child)
+                    frontier_nodes.append(child[0])
 
-
+# @profile
 def uniform_cost(world_grid, channels, start_state, end_state):
     cost = 0
     node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
