@@ -3,6 +3,11 @@ from collections import deque
 import time
 import bisect
 import heapq
+import NinjaTurtle
+from NinjaTurtle import breadth_first as bfs_ninja
+from NinjaTurtle import uniform_cost as ucs_ninja
+from NinjaTurtle import a_star as a_star_ninja
+import filecmp
 
 
 def jaunt(channels, current_pos):  # TODO check edge cases, what if two channels are specified twice; what if
@@ -106,7 +111,7 @@ def breadth_first(world_grid, channels, start_state, end_state):
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
         if len(frontier) == 0:
-            print("FAIL")
+            print("FAIL len(explored) = {}".format(len(explored)))
             return create_output(curr_node, ['FAIL'])
         curr_node = frontier.pop()
         frontier_nodes.pop(0)
@@ -126,15 +131,14 @@ def breadth_first(world_grid, channels, start_state, end_state):
 
 def add_node(pq, node, heap_dict):
     if tuple(node[2]) in heap_dict:
-        print('removed = {}'.format(node))
-        heap_dict[tuple(node[0])] = None
-        # heap_dict.pop(tuple(node[0]))
+        heap_dict.pop(tuple(node[2]))
     q_node = node
     heap_dict[tuple(node[2])] = q_node
     heapq.heappush(pq, q_node)
 
 
 # TODO: debug UCS and A* to see why they are visiting more nodes than BFS and therefore taking more time.
+#  I dont think I am checking for removed nodes before poping them from pq. And I probably should be
 def uniform_cost(world_grid, channels, start_state, end_state):
     cost = 0
     counter = 0
@@ -143,6 +147,7 @@ def uniform_cost(world_grid, channels, start_state, end_state):
     explored = []
     pq = []
     heap_dict = {}
+    removed = []
     add_node(pq, node, heap_dict)
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
@@ -150,8 +155,8 @@ def uniform_cost(world_grid, channels, start_state, end_state):
             out_node = [curr_node[2], curr_node[0]]
             print(len(explored))
             return create_output(out_node, ['FAIL'])
-
         curr_node = heapq.heappop(pq)
+
         heap_dict.pop(tuple(curr_node[2]))
         # print('pq = {}'.format(pq))
         if curr_node[2] == end_state:
@@ -172,13 +177,15 @@ def uniform_cost(world_grid, channels, start_state, end_state):
             child = [curr_node[0] + cost, counter, next_node]
             if tuple(child[2]) not in heap_dict and get_index(explored, child[2]) < 0:
                 add_node(pq, child, heap_dict)
+                bisect.insort(removed, curr_node[2])
                 tree[str([child[2], child[0]])] = [curr_node[2], curr_node[0]]
             elif tuple(child[2]) in heap_dict:
-                if heap_dict[tuple(child[2])] is not None:
+                if get_index(removed, child[2]) < 0:  # check if it is not in removed, it will return -1
                     q = heap_dict[tuple(child[2])]
                     if q[0] > child[0]:
                         tree[str([child[2], child[0]])] = [curr_node[2], curr_node[0]]
                         add_node(pq, child, heap_dict)
+                        bisect.insort(removed, curr_node[2])
 
 
 def a_star(world_grid, channels, start_state, end_state):
@@ -186,7 +193,7 @@ def a_star(world_grid, channels, start_state, end_state):
     fn = 0
     counter = 0
     node = [fn, counter, [int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
-    tree = {str([node[2], node[0]]): [None]}
+    tree = {str([node[2], node[3]]): [None]}
     explored = []
     pq = []
     heap_dict = {}
@@ -259,8 +266,13 @@ while i < no_channels:
 st = time.time()
 if algorithm == "BFS":
     breadth_first(world, ch, start, end)
+    bfs_ninja(world, ch, start, end)
 elif algorithm == "UCS":
     uniform_cost(world, ch, start, end)
+    ucs_ninja(world, ch, start, end)
 elif algorithm == "A*":
     a_star(world, ch, start, end)
+    a_star_ninja(world, ch, start, end)
 print("it took {}".format(time.time() - st))
+
+print(filecmp.cmp('output.txt', 'ninja_output.txt'))

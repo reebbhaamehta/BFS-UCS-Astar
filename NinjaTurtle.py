@@ -66,7 +66,7 @@ def calculate_heuristic(end_state, current_state):
 
 
 def create_output(current_node, path):
-    file_output = open('output.txt', 'w')
+    file_output = open('ninja_output.txt', 'w')
     if path == ['FAIL']:
         file_output.write('FAIL')
     else:
@@ -106,7 +106,7 @@ def breadth_first(world_grid, channels, start_state, end_state):
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
         if len(frontier) == 0:
-            print("FAIL")
+            print("FAIL len(explored) = {}".format(len(explored)))
             return create_output(curr_node, ['FAIL'])
         curr_node = frontier.pop()
         frontier_nodes.pop(0)
@@ -118,6 +118,7 @@ def breadth_first(world_grid, channels, start_state, end_state):
             if child[0] not in frontier_nodes and get_index(explored, child[0]) < 0:
                 tree[str(child)] = curr_node
                 if child[0] == end_state:
+                    print('ninja_turutle len(explored) = {}'.format(len(explored)))
                     path = find_path(tree, child)
                     return create_output(child, path)
                 frontier.appendleft(child)
@@ -140,7 +141,6 @@ def uniform_cost(world_grid, channels, start_state, end_state):
         curr_node = frontier[0]
         del frontier[0]
         del frontier_nodes[0]
-        print(curr_node)
         if curr_node[0] == end_state:
             path = find_path(tree, curr_node)
             print(len(explored))
