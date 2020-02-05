@@ -1,8 +1,8 @@
 from collections import deque
 import time
+import bisect
 
 
-# @profile
 def jaunt(channels, current_pos):  # TODO check edge cases, what if two channels are specified twice; what if
     jaunt_to = current_pos
     for i in channels:
@@ -15,7 +15,6 @@ def jaunt(channels, current_pos):  # TODO check edge cases, what if two channels
 
 # TODO: Change this whole monstrosity to a dictionary
 # TODO can the world grid size be 0 0? should probable avoid a crash anyway
-# @profile
 def next_position(world_grid, channels, current_pos, direction):
     next_point = current_pos
     if direction == 'North':
@@ -66,7 +65,6 @@ def calculate_heuristic(end_state, current_state):
     return fn
 
 
-# @profile
 def create_output(current_node, path):
     file_output = open('output.txt', 'w')
     if path == ['FAIL']:
@@ -85,7 +83,13 @@ def create_output(current_node, path):
     file_output.close()
 
 
-@profile
+def get_index(find_in, value):
+    i = bisect.bisect_left(find_in, value)
+    if i != len(find_in) and find_in[i] == value:
+        return i
+    return -1
+
+
 def breadth_first(world_grid, channels, start_state, end_state):
     cost = 0
     frontier = deque([])
@@ -105,31 +109,29 @@ def breadth_first(world_grid, channels, start_state, end_state):
             print("FAIL")
             return create_output(curr_node, ['FAIL'])
         curr_node = frontier.pop()
-        temp = frontier_nodes.pop(0)
-        explored.append(curr_node[0])
+        frontier_nodes.pop(0)
+        bisect.insort(explored, curr_node[0])
         for action in actions:
             child = [next_position(world_grid, channels, curr_node[0], action),
                      curr_node[1] + 1]
             # print('action = {}'.format(action))#Suggest: this way you can have insertions in the middle of the string
-            # if not in_frontier and not in_explored:
-            # nodes_in_frontier = [n[0] for n in frontier]
+            if child[0] not in frontier_nodes and get_index(explored, child[0]) < 0:
+                tree[str(child)] = curr_node
+                if child[0] == end_state:
+                    path = find_path(tree, child)
+                    return create_output(child, path)
+                frontier.appendleft(child)
+                frontier_nodes.append(child[0])
 
-            if child[0] not in frontier_nodes:
-                if child[0] not in explored:
-                    tree[str(child)] = curr_node
-                    if child[0] == end_state:
-                        path = find_path(tree, child)
-                        return create_output(child, path)
-                    frontier.appendleft(child)
-                    frontier_nodes.append(child[0])
 
-# @profile
 def uniform_cost(world_grid, channels, start_state, end_state):
     cost = 0
     node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
     tree = {str(node): [None]}
     frontier = [node]
     explored = []
+    frontier_nodes = [node[0]]
+
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
         if len(frontier) == 0:
@@ -137,11 +139,13 @@ def uniform_cost(world_grid, channels, start_state, end_state):
             return create_output(curr_node, ['FAIL'])
         curr_node = frontier[0]
         del frontier[0]
+        del frontier_nodes[0]
+
         if curr_node[0] == end_state:
             path = find_path(tree, curr_node)
             print(len(explored))
             return create_output(curr_node, path)
-        explored.append(curr_node[0])
+        bisect.insort(explored, curr_node[0])
         for action in actions:
             next_node = next_position(world_grid, channels, curr_node[0], action)
             if action == 'North' or action == 'South' or action == 'East' or action == 'West':
@@ -151,9 +155,7 @@ def uniform_cost(world_grid, channels, start_state, end_state):
             else:
                 cost = 14
             child = [next_node, curr_node[1] + cost]
-            # if not in_frontier and not in_explored:
-            nodes_in_frontier = [n[0] for n in frontier]
-            if child[0] not in explored and child[0] not in nodes_in_frontier:
+            if child[0] not in frontier_nodes and get_index(explored, child[0]) < 0:
                 ind = len(frontier)
                 for i in frontier:
                     if child[1] < i[1]:
@@ -161,10 +163,12 @@ def uniform_cost(world_grid, channels, start_state, end_state):
                         break
                 frontier.insert(ind, child)
                 tree[str(child)] = curr_node
-            elif child in nodes_in_frontier:
-                index = frontier.index(child)
-                if frontier > child[1]:
+                frontier_nodes.insert(ind, child[0])
+            elif child[0] in frontier_nodes:
+                index = frontier_nodes.index(child[0])
+                if frontier[index][1] > child[1]:
                     frontier.insert(index, child)
+                    frontier_nodes.insert(index, child[0])
                     tree[str(child)] = curr_node
 
 
@@ -175,6 +179,7 @@ def a_star(world_grid, channels, start_state, end_state):
     tree = {str(node): [None]}
     frontier = [node]
     explored = []
+    frontier_nodes = [node[0]]
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
         if len(frontier) == 0:
@@ -182,11 +187,12 @@ def a_star(world_grid, channels, start_state, end_state):
             return create_output(curr_node, ['FAIL'])
         curr_node = frontier[0]
         del frontier[0]
+        del frontier_nodes[0]
         if curr_node[0] == end_state:
             path = find_path(tree, curr_node)
             print(len(explored))
             return create_output(curr_node, path)
-        explored.append(curr_node[0])
+        bisect.insort(explored, curr_node[0])
         for action in actions:
             next_node = next_position(world_grid, channels, curr_node[0], action)
             if action == 'North' or action == 'South' or action == 'East' or action == 'West':
@@ -198,24 +204,25 @@ def a_star(world_grid, channels, start_state, end_state):
             child = [next_node, curr_node[1] + cost, fn]
             fn = calculate_heuristic(end_state, child)
             child = [next_node, curr_node[1] + cost, fn]
-            # if not in_frontier and not in_explored:
-            nodes_in_frontier = [n[0] for n in frontier]
-            if child[0] not in explored and child[0] not in nodes_in_frontier:
+            # TODO optimize this block using bisect
+            if child[0] not in frontier_nodes and get_index(explored, child[0]) < 0:
                 ind = len(frontier)
                 for i in frontier:
                     if child[2] < i[2]:
                         ind = frontier.index(i)
                         break
                 frontier.insert(ind, child)
+                frontier_nodes.insert(ind, child[0])
                 tree[str(child)] = curr_node
-            elif child in nodes_in_frontier:
-                index = frontier.index(child)
-                if frontier > child[2]:
+            elif child[0] in frontier_nodes:
+                index = frontier_nodes.index(child[0])
+                if frontier[index][2] > child[2]:
                     frontier.insert(index, child)
+                    frontier_nodes.insert(index, child[0])
                     tree[str(child)] = curr_node
 
 
-file_Input = open("input.txt")
+file_Input = open("input_fails_with_astar.txt")
 lines = file_Input.readlines()
 file_Input.close()
 
@@ -239,7 +246,7 @@ ch = list()
 
 while i < no_channels:
     single_channel = lines[5 + i].split()
-    single_channel = [int(i) for i in single_channel]
+    single_channel = [int(m) for m in single_channel]
     ch.append(single_channel)
     i = i + 1
 

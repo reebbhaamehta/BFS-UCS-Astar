@@ -1,6 +1,8 @@
+import itertools
 from collections import deque
 import time
 import bisect
+import heapq
 
 
 def jaunt(channels, current_pos):  # TODO check edge cases, what if two channels are specified twice; what if
@@ -83,9 +85,9 @@ def create_output(current_node, path):
     file_output.close()
 
 
-def index_explored(a, value):
-    i = bisect.bisect_left(a, value)
-    if i != len(a) and a[i] == value:
+def get_index(find_in, value):
+    i = bisect.bisect_left(find_in, value)
+    if i != len(find_in) and find_in[i] == value:
         return i
     return -1
 
@@ -109,16 +111,13 @@ def breadth_first(world_grid, channels, start_state, end_state):
             print("FAIL")
             return create_output(curr_node, ['FAIL'])
         curr_node = frontier.pop()
-        temp = frontier_nodes.pop(0)
+        frontier_nodes.pop(0)
         bisect.insort(explored, curr_node[0])
         for action in actions:
             child = [next_position(world_grid, channels, curr_node[0], action),
                      curr_node[1] + 1]
             # print('action = {}'.format(action))#Suggest: this way you can have insertions in the middle of the string
-            # if not in_frontier and not in_explored:
-            # nodes_in_frontier = [n[0] for n in frontier]
-
-            if child[0] not in frontier_nodes and index_explored(explored, child[0]) < 0:
+            if child[0] not in frontier_nodes and get_index(explored, child[0]) < 0:
                 tree[str(child)] = curr_node
                 if child[0] == end_state:
                     path = find_path(tree, child)
@@ -127,19 +126,56 @@ def breadth_first(world_grid, channels, start_state, end_state):
                 frontier_nodes.append(child[0])
 
 
+def add_task(task, entry_finder, counter, pq, priority=0):
+    'Add a new task or update the priority of an existing task'
+    if str(task) in entry_finder:
+        remove_task(task)
+    count = next(counter)
+    entry = [priority, count, task]
+    entry_finder[str(task)] = entry
+    heapq.heappush(pq, entry)
+
+
+def remove_task(task, entry_finder):
+    'Mark an existing task as REMOVED.  Raise KeyError if not found.'
+    entry = entry_finder.pop(task)
+    entry[-1] = '<removed-task>'
+
+
+def pop_task(pq, entry_finder):
+    'Remove and return the lowest priority task. Raise KeyError if empty.'
+    while pq:
+        priority, count, task = heapq.heappop(pq)
+        if task != '<removed-task>':
+            del entry_finder[str(task)]
+            return task
+    raise KeyError('pop from an empty priority queue')
+
+
 def uniform_cost(world_grid, channels, start_state, end_state):
     cost = 0
     node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
     tree = {str(node): [None]}
     frontier = [node]
     explored = []
+    frontier_nodes = [node[0]]
+    priority_queue = []
+    entry_finder = {}
+    counter = itertools.count()
+    add_task(node, entry_finder, counter, priority_queue, priority=node[1])
+    print(priority_queue)
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
         if len(frontier) == 0:
             print(len(explored))
             return create_output(curr_node, ['FAIL'])
+        curr_node = pop_task(priority_queue, entry_finder)
+        print("pq curr_node       = {}".format(curr_node))
         curr_node = frontier[0]
+        print("frontier curr_node = {}".format(curr_node))
         del frontier[0]
+        del frontier_nodes[0]
+
         if curr_node[0] == end_state:
             path = find_path(tree, curr_node)
             print(len(explored))
@@ -154,20 +190,22 @@ def uniform_cost(world_grid, channels, start_state, end_state):
             else:
                 cost = 14
             child = [next_node, curr_node[1] + cost]
-            # if not in_frontier and not in_explored:
-            nodes_in_frontier = [n[0] for n in frontier]
-            if child[0] not in nodes_in_frontier and index_explored(explored, child[0]) < 0:
+            if child[0] not in frontier_nodes and get_index(explored, child[0]) < 0:
                 ind = len(frontier)
                 for i in frontier:
                     if child[1] < i[1]:
                         ind = frontier.index(i)
                         break
                 frontier.insert(ind, child)
+                add_task(child,entry_finder,counter,priority_queue,child[1])
                 tree[str(child)] = curr_node
-            elif child in nodes_in_frontier:
-                index = frontier.index(child)
-                if frontier > child[1]:
+                frontier_nodes.insert(ind, child[0])
+            elif child[0] in frontier_nodes:
+                index = frontier_nodes.index(child[0])
+                if frontier[index][1] > child[1]:
                     frontier.insert(index, child)
+                    frontier_nodes.insert(index, child[0])
+                    add_task(child, entry_finder, counter, priority_queue, child[1])
                     tree[str(child)] = curr_node
 
 
@@ -178,6 +216,7 @@ def a_star(world_grid, channels, start_state, end_state):
     tree = {str(node): [None]}
     frontier = [node]
     explored = []
+    frontier_nodes = [node[0]]
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
         if len(frontier) == 0:
@@ -185,6 +224,7 @@ def a_star(world_grid, channels, start_state, end_state):
             return create_output(curr_node, ['FAIL'])
         curr_node = frontier[0]
         del frontier[0]
+        del frontier_nodes[0]
         if curr_node[0] == end_state:
             path = find_path(tree, curr_node)
             print(len(explored))
@@ -201,20 +241,21 @@ def a_star(world_grid, channels, start_state, end_state):
             child = [next_node, curr_node[1] + cost, fn]
             fn = calculate_heuristic(end_state, child)
             child = [next_node, curr_node[1] + cost, fn]
-            # if not in_frontier and not in_explored:
-            nodes_in_frontier = [n[0] for n in frontier]
-            if child[0] not in nodes_in_frontier and index_explored(explored, child[0]) < 0:
+            # TODO optimize priority queue frontier
+            if child[0] not in frontier_nodes and get_index(explored, child[0]) < 0:
                 ind = len(frontier)
                 for i in frontier:
                     if child[2] < i[2]:
                         ind = frontier.index(i)
                         break
                 frontier.insert(ind, child)
+                frontier_nodes.insert(ind, child[0])
                 tree[str(child)] = curr_node
-            elif child in nodes_in_frontier:
-                index = frontier.index(child)
-                if frontier > child[2]:
+            elif child[0] in frontier_nodes:
+                index = frontier_nodes.index(child[0])
+                if frontier[index][2] > child[2]:
                     frontier.insert(index, child)
+                    frontier_nodes.insert(index, child[0])
                     tree[str(child)] = curr_node
 
 
@@ -242,12 +283,9 @@ ch = list()
 
 while i < no_channels:
     single_channel = lines[5 + i].split()
-    single_channel = [int(i) for i in single_channel]
+    single_channel = [int(m) for m in single_channel]
     ch.append(single_channel)
     i = i + 1
-
-#  create adjacency graph
-
 
 st = time.time()
 if algorithm == "BFS":
