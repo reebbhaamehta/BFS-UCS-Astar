@@ -15,7 +15,6 @@ def jaunt(channels, current_pos):  # TODO check edge cases, what if two channels
     return jaunt_to
 
 
-# TODO: Change this whole monstrosity to a dictionary
 # TODO can the world grid size be 0 0? should probable avoid a crash anyway
 def next_position(world_grid, channels, current_pos, direction):
     next_point = current_pos
@@ -98,7 +97,6 @@ def breadth_first(world_grid, channels, start_state, end_state):
     node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
     tree = {str(node): [None]}
     frontier_nodes = []
-    # TODO: keep track of nodes in frontier as its own data structure
     if start_state == end_state:
         create_output(node, [node])
         return
@@ -116,147 +114,118 @@ def breadth_first(world_grid, channels, start_state, end_state):
         for action in actions:
             child = [next_position(world_grid, channels, curr_node[0], action),
                      curr_node[1] + 1]
-            # print('action = {}'.format(action))#Suggest: this way you can have insertions in the middle of the string
             if child[0] not in frontier_nodes and get_index(explored, child[0]) < 0:
                 tree[str(child)] = curr_node
                 if child[0] == end_state:
+                    print(len(explored))
                     path = find_path(tree, child)
                     return create_output(child, path)
                 frontier.appendleft(child)
                 frontier_nodes.append(child[0])
 
 
-def add_task(task, entry_finder, counter, pq, priority=0):
-    'Add a new task or update the priority of an existing task'
-    if str(task) in entry_finder:
-        remove_task(task)
-    count = next(counter)
-    entry = [priority, count, task]
-    entry_finder[str(task)] = entry
-    heapq.heappush(pq, entry)
+def add_node(pq, node, heap_dict):
+    if tuple(node[2]) in heap_dict:
+        print('removed = {}'.format(node))
+        heap_dict[tuple(node[0])] = None
+        # heap_dict.pop(tuple(node[0]))
+    q_node = node
+    heap_dict[tuple(node[2])] = q_node
+    heapq.heappush(pq, q_node)
 
 
-def remove_task(task, entry_finder):
-    'Mark an existing task as REMOVED.  Raise KeyError if not found.'
-    entry = entry_finder.pop(task)
-    entry[-1] = '<removed-task>'
-
-
-def pop_task(pq, entry_finder):
-    'Remove and return the lowest priority task. Raise KeyError if empty.'
-    while pq:
-        priority, count, task = heapq.heappop(pq)
-        if task != '<removed-task>':
-            del entry_finder[str(task)]
-            return task
-    raise KeyError('pop from an empty priority queue')
-
-
+# TODO: debug UCS and A* to see why they are visiting more nodes than BFS and therefore taking more time.
 def uniform_cost(world_grid, channels, start_state, end_state):
     cost = 0
-    node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
-    tree = {str(node): [None]}
-    frontier = [node]
+    counter = 0
+    node = [cost, counter, [int(start_state[0]), int(start_state[1]), int(start_state[2])]]
+    tree = {str([node[2], node[0]]): [None]}
     explored = []
-    frontier_nodes = [node[0]]
-    priority_queue = []
-    entry_finder = {}
-    counter = itertools.count()
-    add_task(node, entry_finder, counter, priority_queue, priority=node[1])
-    print(priority_queue)
+    pq = []
+    heap_dict = {}
+    add_node(pq, node, heap_dict)
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
-        if len(frontier) == 0:
+        if len(heap_dict) == 0:
+            out_node = [curr_node[2], curr_node[0]]
             print(len(explored))
-            return create_output(curr_node, ['FAIL'])
-        curr_node = pop_task(priority_queue, entry_finder)
-        print("pq curr_node       = {}".format(curr_node))
-        curr_node = frontier[0]
-        print("frontier curr_node = {}".format(curr_node))
-        del frontier[0]
-        del frontier_nodes[0]
+            return create_output(out_node, ['FAIL'])
 
-        if curr_node[0] == end_state:
-            path = find_path(tree, curr_node)
+        curr_node = heapq.heappop(pq)
+        heap_dict.pop(tuple(curr_node[2]))
+        # print('pq = {}'.format(pq))
+        if curr_node[2] == end_state:
+            out_node = [curr_node[2], curr_node[0]]
+            path = find_path(tree, out_node)
             print(len(explored))
-            return create_output(curr_node, path)
-        bisect.insort(explored, curr_node[0])
+            return create_output(out_node, path)
+        bisect.insort(explored, curr_node[2])
         for action in actions:
-            next_node = next_position(world_grid, channels, curr_node[0], action)
+            next_node = next_position(world_grid, channels, curr_node[2], action)
             if action == 'North' or action == 'South' or action == 'East' or action == 'West':
                 cost = 10
             elif action == 'Jaunt':
-                cost = abs(next_node[0] - curr_node[0][0])
+                cost = abs(next_node[0] - curr_node[2][0])
             else:
                 cost = 14
-            child = [next_node, curr_node[1] + cost]
-            if child[0] not in frontier_nodes and get_index(explored, child[0]) < 0:
-                ind = len(frontier)
-                for i in frontier:
-                    if child[1] < i[1]:
-                        ind = frontier.index(i)
-                        break
-                frontier.insert(ind, child)
-                add_task(child,entry_finder,counter,priority_queue,child[1])
-                tree[str(child)] = curr_node
-                frontier_nodes.insert(ind, child[0])
-            elif child[0] in frontier_nodes:
-                index = frontier_nodes.index(child[0])
-                if frontier[index][1] > child[1]:
-                    frontier.insert(index, child)
-                    frontier_nodes.insert(index, child[0])
-                    add_task(child, entry_finder, counter, priority_queue, child[1])
-                    tree[str(child)] = curr_node
+            counter += 1
+            child = [curr_node[0] + cost, counter, next_node]
+            if tuple(child[2]) not in heap_dict and get_index(explored, child[2]) < 0:
+                add_node(pq, child, heap_dict)
+                tree[str([child[2], child[0]])] = [curr_node[2], curr_node[0]]
+            elif tuple(child[2]) in heap_dict:
+                if heap_dict[tuple(child[2])] is not None:
+                    q = heap_dict[tuple(child[2])]
+                    if q[0] > child[0]:
+                        tree[str([child[2], child[0]])] = [curr_node[2], curr_node[0]]
+                        add_node(pq, child, heap_dict)
 
 
 def a_star(world_grid, channels, start_state, end_state):
     cost = 0
     fn = 0
-    node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost, fn]
-    tree = {str(node): [None]}
-    frontier = [node]
+    counter = 0
+    node = [fn, counter, [int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
+    tree = {str([node[2], node[0]]): [None]}
     explored = []
-    frontier_nodes = [node[0]]
+    pq = []
+    heap_dict = {}
+    add_node(pq, node, heap_dict)
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
-        if len(frontier) == 0:
+        if len(heap_dict) == 0:
+            out_node = [curr_node[2], curr_node[3]]
             print(len(explored))
-            return create_output(curr_node, ['FAIL'])
-        curr_node = frontier[0]
-        del frontier[0]
-        del frontier_nodes[0]
-        if curr_node[0] == end_state:
-            path = find_path(tree, curr_node)
+            return create_output(out_node, ['FAIL'])
+        curr_node = heapq.heappop(pq)
+        heap_dict.pop(tuple(curr_node[2]))
+        if curr_node[2] == end_state:
+            out_node = [curr_node[2], curr_node[3]]
+            path = find_path(tree, out_node)
             print(len(explored))
-            return create_output(curr_node, path)
-        bisect.insort(explored, curr_node[0])
+            return create_output(out_node, path)
+        bisect.insort(explored, curr_node[2])
         for action in actions:
-            next_node = next_position(world_grid, channels, curr_node[0], action)
+            next_node = next_position(world_grid, channels, curr_node[2], action)
             if action == 'North' or action == 'South' or action == 'East' or action == 'West':
                 cost = 10
             elif action == 'Jaunt':
-                cost = abs(next_node[0] - curr_node[0][0])
+                cost = abs(next_node[0] - curr_node[2][0])
             else:
                 cost = 14
-            child = [next_node, curr_node[1] + cost, fn]
-            fn = calculate_heuristic(end_state, child)
-            child = [next_node, curr_node[1] + cost, fn]
-            # TODO optimize priority queue frontier
-            if child[0] not in frontier_nodes and get_index(explored, child[0]) < 0:
-                ind = len(frontier)
-                for i in frontier:
-                    if child[2] < i[2]:
-                        ind = frontier.index(i)
-                        break
-                frontier.insert(ind, child)
-                frontier_nodes.insert(ind, child[0])
-                tree[str(child)] = curr_node
-            elif child[0] in frontier_nodes:
-                index = frontier_nodes.index(child[0])
-                if frontier[index][2] > child[2]:
-                    frontier.insert(index, child)
-                    frontier_nodes.insert(index, child[0])
-                    tree[str(child)] = curr_node
+            counter += 1
+            child = [fn, counter, next_node, curr_node[3] + cost]
+            fn = calculate_heuristic(end_state, [child[2], child[3], child[0]])
+            child = [fn, counter, next_node, curr_node[3] + cost]
+            if tuple(child[2]) not in heap_dict and get_index(explored, child[2]) < 0:
+                add_node(pq, child, heap_dict)
+                tree[str([child[2], child[3]])] = [curr_node[2], curr_node[3]]
+            elif tuple(child[2]) in heap_dict:
+                if heap_dict[tuple(child[2])] is not None:
+                    q = heap_dict[tuple(child[2])]
+                    if q[0] > child[0]:
+                        tree[str([child[2], child[3]])] = [curr_node[2], curr_node[3]]
+                        add_node(pq, child, heap_dict)
 
 
 file_Input = open("input.txt")

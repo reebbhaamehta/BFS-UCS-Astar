@@ -140,7 +140,7 @@ def uniform_cost(world_grid, channels, start_state, end_state):
         curr_node = frontier[0]
         del frontier[0]
         del frontier_nodes[0]
-
+        print(curr_node)
         if curr_node[0] == end_state:
             path = find_path(tree, curr_node)
             print(len(explored))
@@ -222,7 +222,7 @@ def a_star(world_grid, channels, start_state, end_state):
                     tree[str(child)] = curr_node
 
 
-file_Input = open("input_fails_with_astar.txt")
+file_Input = open("input.txt")
 lines = file_Input.readlines()
 file_Input.close()
 
