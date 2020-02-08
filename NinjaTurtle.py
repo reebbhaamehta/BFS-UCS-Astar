@@ -166,6 +166,9 @@ def uniform_cost(world_grid, channels, start_state, end_state):
                 frontier_nodes.insert(ind, child[0])
             elif child[0] in frontier_nodes:
                 index = frontier_nodes.index(child[0])
+
+                print(index, child[0], frontier[index][0], frontier[index][1], child[1])
+
                 if frontier[index][1] > child[1]:
                     frontier.insert(index, child)
                     frontier_nodes.insert(index, child[0])

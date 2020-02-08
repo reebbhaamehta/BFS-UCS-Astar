@@ -3,11 +3,11 @@ from collections import deque
 import time
 import bisect
 import heapq
-import NinjaTurtle
-from NinjaTurtle import breadth_first as bfs_ninja
-from NinjaTurtle import uniform_cost as ucs_ninja
-from NinjaTurtle import a_star as a_star_ninja
-import filecmp
+# import NinjaTurtle
+# from NinjaTurtle import breadth_first as bfs_ninja
+# from NinjaTurtle import uniform_cost as ucs_ninja
+# from NinjaTurtle import a_star as a_star_ninja
+# import filecmp
 
 
 def jaunt(channels, current_pos):  # TODO check edge cases, what if two channels are specified twice; what if
@@ -266,13 +266,13 @@ while i < no_channels:
 st = time.time()
 if algorithm == "BFS":
     breadth_first(world, ch, start, end)
-    bfs_ninja(world, ch, start, end)
+    # bfs_ninja(world, ch, start, end)
 elif algorithm == "UCS":
     uniform_cost(world, ch, start, end)
-    ucs_ninja(world, ch, start, end)
+    # ucs_ninja(world, ch, start, end)
 elif algorithm == "A*":
     a_star(world, ch, start, end)
-    a_star_ninja(world, ch, start, end)
+    # a_star_ninja(world, ch, start, end)
 print("it took {}".format(time.time() - st))
 
-print(filecmp.cmp('output.txt', 'ninja_output.txt'))
+# print(filecmp.cmp('output.txt', 'ninja_output.txt'))
