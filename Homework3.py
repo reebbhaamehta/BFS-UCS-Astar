@@ -3,19 +3,33 @@ import time
 import bisect
 import heapq
 
-
+# @profile
 def jaunt(channels, current_pos,
           channel_dict):  # TODO check edge cases, what if two channels are specified twice; what if
     jaunt_to = current_pos
+    jaunt_to_ = current_pos
+    poss_jaunts = channel_dict[current_pos[0]]
+    print(poss_jaunts)
+    print(current_pos)
+    for i in poss_jaunts:
+        if current_pos[1] == i[1] and current_pos[2] == i[2]:
+            jaunt_to_ = list(i)
+    print(jaunt_to_)
+
     for i in channels:
         if current_pos == [i[0], i[1], i[2]]:
             jaunt_to = [i[3], i[1], i[2]]
         elif current_pos == [i[3], i[1], i[2]]:
             jaunt_to = [i[0], i[1], i[2]]
+    if jaunt_to_ != jaunt_to:
+        print(jaunt_to)
+        print(jaunt_to_)
+        exit()
     return jaunt_to
 
 
 # TODO can the world grid size be 0 0? should probable avoid a crash anyway
+# @profile
 def next_position(world_grid, channels, current_pos, direction, channel_dict):
     next_point = current_pos
     if direction == 'North':
@@ -46,7 +60,7 @@ def next_position(world_grid, channels, current_pos, direction, channel_dict):
         next_point = current_pos
     return next_point
 
-
+# @profile
 def find_path(tree, child):
     curr_parent = child
     path = list()
@@ -60,7 +74,7 @@ def find_path(tree, child):
 
 # TODO: Only explore a world/ only jaunt to a position if the goal could be found at the end of it.
 #  make a jaunt action cost if there is no path, much more expensive
-
+# @profile
 def calculate_heuristic(end_state, current_state, channel_dict, explored_years, year_dict):
     current_cost = current_state[1]
     curr_year = current_state[0][0]
@@ -69,14 +83,14 @@ def calculate_heuristic(end_state, current_state, channel_dict, explored_years, 
     jaunt_costs = [9999999]
     # print(current_state)
     if end_state[0] == curr_year:
-        # estimated_future_cost = (10 * max(abs(curr_x - end_state[1]), abs(curr_y - end_state[2])))
+        max_dist = (max(abs(curr_x - end_state[1]), abs(curr_y - end_state[2])))
+        min_dist = (min(abs(curr_x - end_state[1]), abs(curr_y - end_state[2])))
         estimated_future_cost = ((curr_x - end_state[1]) ** 2 + (curr_y - end_state[2]) ** 2) ** 0.5
     elif curr_year in channel_dict:  # if the goal is not in the current year but is in the path check if the current year is in the path
         for jaunts in channel_dict[curr_year]: # for all jaunts find the distance to the closest jaunt location
-            if jaunts[0] not in explored_years:
-                jaunt_costs.append((10*(max(abs(curr_x - jaunts[1]), abs(curr_y - jaunts[2]))))+year_dict[jaunts[0]])
-                #jaunt_costs.append(((curr_x - jaunts[1]) ** 2 + (curr_y - jaunts[2]) ** 2) ** 0.5)
-                # estimated_future_cost = ((curr_x - end_state[1]) ** 2 + (curr_y - end_state[2]) ** 2) ** 0.5
+            max_dist = (max(abs(curr_x - jaunts[1]), abs(curr_y - jaunts[2])))
+            min_dist = (min(abs(curr_x - jaunts[1]), abs(curr_y - jaunts[2])))
+            jaunt_costs.append((14*min_dist)+(10*(max_dist-min_dist))+year_dict[curr_year])
         estimated_future_cost = min(jaunt_costs)
     else:
         estimated_future_cost = 99999999
@@ -117,7 +131,7 @@ def add_node(pq, node, pq_dict):
     pq_dict[tuple(node[2])] = node
     heapq.heappush(pq, node)
 
-
+# @profile
 def assign_costs_years(channel_dict, end_year):
     unvisited = []
     year_cost = {}
@@ -134,7 +148,7 @@ def assign_costs_years(channel_dict, end_year):
         del unvisited[0]
         children = channel_dict[current[1]]
         for child in children:
-            cost = abs(child[0] - current[1])
+            cost = abs(child[0] - current[1])  # + cost to get to the jaunt
             child_q = [cost + current[0], child[0]]
             if year_cost[child_q[1]] >= 9999999:
                 year_cost[child_q[1]] = child_q[0]
@@ -234,7 +248,7 @@ def uniform_cost(world_grid, channels, start_state, end_state, channel_dict):
                         add_node(pq, child, heap_dict)
                         bisect.insort(removed, curr_node[2])
 
-
+# @profile
 def a_star(world_grid, channels, start_state, end_state, channel_dict):
     cost, fn, counter = 0, 0, 0
     node = [fn, counter, [int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
