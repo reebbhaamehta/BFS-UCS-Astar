@@ -66,24 +66,23 @@ def calculate_heuristic(end_state, current_state, channel_dict, explored_years, 
     curr_year = current_state[0][0]
     curr_x = current_state[0][1]
     curr_y = current_state[0][2]
-    estimated_future_cost = year_dict[curr_year]
-
-    # estimated_future_cost = (abs(current_state[0][0] - end_state[0])) \
-    #                         + max(abs(current_state[0][1] - end_state[1]), abs(current_state[0][2] - end_state[2]))
+    jaunt_costs = [9999999]
+    # print(current_state)
     if end_state[0] == curr_year:
-        estimated_future_cost = (10 * max(abs(curr_x - end_state[1]), abs(curr_y - end_state[2])))
-    else:  # if the goal is not in the current year, check if the current year is in the path
-        # if year_dict[curr_year] >= 9999999:
-            # current year is not in the path and we shouldn't have to visit this year
-        estimated_future_cost = year_dict[curr_year]
-        # elif curr_year not in explored_years:
-        #     jaunts_poss = channel_dict[curr_year]
-            # estimated_future_cost = year_dict[curr_year]
-
-            # for i in jaunts_poss:
-                # print(i)
-
+        # estimated_future_cost = (10 * max(abs(curr_x - end_state[1]), abs(curr_y - end_state[2])))
+        estimated_future_cost = ((curr_x - end_state[1]) ** 2 + (curr_y - end_state[2]) ** 2) ** 0.5
+    elif curr_year in channel_dict:  # if the goal is not in the current year but is in the path check if the current year is in the path
+        for jaunts in channel_dict[curr_year]: # for all jaunts find the distance to the closest jaunt location
+            if jaunts[0] not in explored_years:
+                jaunt_costs.append((10*(max(abs(curr_x - jaunts[1]), abs(curr_y - jaunts[2]))))+year_dict[jaunts[0]])
+                #jaunt_costs.append(((curr_x - jaunts[1]) ** 2 + (curr_y - jaunts[2]) ** 2) ** 0.5)
+                # estimated_future_cost = ((curr_x - end_state[1]) ** 2 + (curr_y - end_state[2]) ** 2) ** 0.5
+        estimated_future_cost = min(jaunt_costs)
+    else:
+        estimated_future_cost = 99999999
     fn = current_cost + estimated_future_cost
+    # fn = estimated_future_cost
+    # print(fn)
     return fn
 
 
@@ -130,15 +129,11 @@ def assign_costs_years(channel_dict, end_year):
         unvisited.append([cost, channel])
         year_cost[channel] = cost
     unvisited.sort()
-    y_unvisit = [i[1] for i in unvisited]
     while len(unvisited) != 0:
         current = unvisited[0]
         del unvisited[0]
-        # print('current = {}'.format(current))
         children = channel_dict[current[1]]
-        # print('children = {}'.format(children))
         for child in children:
-            # print(child)
             cost = abs(child[0] - current[1])
             child_q = [cost + current[0], child[0]]
             if year_cost[child_q[1]] >= 9999999:
@@ -146,14 +141,10 @@ def assign_costs_years(channel_dict, end_year):
             y_unvisit = [i[1] for i in unvisited]
             if child_q[1] in y_unvisit:
                 index = y_unvisit.index(child_q[1])
-                # print(cost)
                 if child_q[0] < unvisited[index][0]:
                     year_cost[child_q[1]] = child_q[0]
                     unvisited[index][0] = child_q[0]
                     unvisited.sort()
-            # print('child = {}'.format(child_q))
-        # print('unvisited.={}'.format(unvisited))
-    # print(year_cost)
     return year_cost
 
 
@@ -253,7 +244,7 @@ def a_star(world_grid, channels, start_state, end_state, channel_dict):
     add_node(pq, node, pq_dict)
     actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     year_dict = assign_costs_years(channel_dict, end_state[0])
-    print(year_dict)
+    # print(year_dict)
     while True:
         if len(pq_dict) == 0:
             out_node = [curr_node[2], curr_node[3]]
@@ -265,6 +256,8 @@ def a_star(world_grid, channels, start_state, end_state, channel_dict):
         else:
             heapq.heappop(pq)
             continue
+        # print(curr_node)
+
         if curr_node[2] == end_state:
             out_node = [curr_node[2], curr_node[3]]
             path = find_path(tree, out_node)
