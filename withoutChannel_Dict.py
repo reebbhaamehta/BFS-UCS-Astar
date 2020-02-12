@@ -106,33 +106,36 @@ def add_node(pq, node, pq_dict):
 
 
 # @profile
-def assign_costs_years(channel_dict, end_year):
+#TODO: NEED TO KEEP TRACK OF THE PARENT
+def assign_costs_years(channel_dict, end_year, node_channel):
     unvisited = []
     year_cost = {}
-    for channel in channel_dict:
-        if channel == end_year:
+    for channel in node_channel:
+        if channel[0] == end_year:
             cost = 0
         else:
             cost = 9999999
         unvisited.append([cost, channel])
-        year_cost[channel] = cost
+        year_cost[channel[0]] = cost
     unvisited.sort()
     while len(unvisited) != 0:
         current = unvisited[0]
         del unvisited[0]
-        children = channel_dict[current[1]]
+        children = node_channel[current[1]]
         for child in children:
-            cost = abs(child[0] - current[1])
-            child_q = [cost + current[0], child[0]]
-            if year_cost[child_q[1]] >= 9999999:
-                year_cost[child_q[1]] = child_q[0]
-            y_unvisit = [i[1] for i in unvisited]
-            if child_q[1] in y_unvisit:
-                index = y_unvisit.index(child_q[1])
+            cost = abs(child[0] - current[1][0])
+            child_q = [cost + current[0], child]
+            print(child_q)
+            if year_cost[child_q[1][0]] > child_q[0]:  # 9999999:
+                year_cost[child_q[1][0]] = child_q[0]
+            y_unvisit = [i[1][0] for i in unvisited]
+            if child_q[1][0] in y_unvisit:
+                index = y_unvisit.index(child_q[1][0])
                 if child_q[0] < unvisited[index][0]:
-                    year_cost[child_q[1]] = child_q[0]
+                    year_cost[child_q[1][0]] = child_q[0]
                     unvisited[index][0] = child_q[0]
                     unvisited.sort()
+    print(year_cost)
     return year_cost
 
 
@@ -230,7 +233,7 @@ def a_star(world_grid, start_state, end_state, channel_dict, node_channel):
     explored, pq = [], []
     pq_dict = {}
     add_node(pq, node, pq_dict)
-    year_dict = assign_costs_years(channel_dict, end_state[0])
+    year_dict = assign_costs_years(channel_dict, end_state[0], node_channel)
     while True:
         if len(pq_dict) == 0:
             out_node = [curr_node[2], curr_node[3]]

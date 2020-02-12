@@ -133,6 +133,7 @@ def assign_costs_years(channel_dict, end_year):
                     year_cost[child_q[1]] = child_q[0]
                     unvisited[index][0] = child_q[0]
                     unvisited.sort()
+    print(year_cost)
     return year_cost
 
 
