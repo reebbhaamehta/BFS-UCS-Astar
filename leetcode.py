@@ -2,6 +2,7 @@ def is_isomorphic(s, t):
     """
     :type s: str
     :type t: str
+
     :rtype: bool
     """
 
@@ -20,7 +21,7 @@ def is_isomorphic(s, t):
     else:
         return False
 
-
+# https://leetcode.com/problems/reverse-linked-list/
 # Definition for singly-linked list.
 class ListNode(object):
     def __init__(self, x):
@@ -33,21 +34,92 @@ def reverseList(head):
     :type head: ListNode
     :rtype: ListNode
     """
-    print(head)
-    if head.next is not None:
-        print(head.next)
-        return reverseList(head.next)
+    if head is None:
+        return None
+    current_node = head
+    next_node = head.next
+    head.next = None
+    while next_node is not None:
+        next_next = next_node.next
+        next_node.next = current_node
+        current_node = next_node
+        next_node = next_next
+    return current_node
 
-https://leetcode.com/problems/reverse-linked-list/
+# Given an array of integers, find if the array contains any duplicates.
+# Your function should return true if any value appears at least twice
+# in the array, and it should return false if every element is distinct.
+def containsDuplicate(nums):
+    """
+    :type nums: List[int]
+    :rtype: bool
+    """
+    nums_dict = {}
+    for i in nums:
+        if i in nums_dict:
+            nums_dict[i] = nums_dict[i] + 1
+            return True
+        else:
+            nums_dict[i] = 1
+    return False
+
+# Write an algorithm to determine if a number is "happy".
+# A happy number is a number defined by the following process:
+# Starting with any positive integer, replace the number by the
+# sum of the squares of its digits, and repeat the process until
+# the number equals 1 (where it will stay), or it loops endlessly
+# in a cycle which does not include 1. Those numbers for which
+# this process ends in 1 are happy numbers.
+# Input: 19
+# Output: true
+# Explanation:
+# 12 + 92 = 82
+# 82 + 22 = 68
+# 62 + 82 = 100
+# 12 + 02 + 02 = 1
+
+def isHappy(n):
+    """
+    :type n: int
+    :rtype: bool
+    """
+    strn = str(n)
+    temp = 0
+    while True:
+        temp = 0
+        for i in strn:
+            temp = temp + int(i)**2
+            print(temp)
+        if int(temp) == 1:
+            return True
+        if int(temp) != 1 and len(str(temp)) == 1:
+            return False
+        strn = str(temp)
+
+
 
 def main():
     s = 'apple'
     t = 'ellpa'
     print(is_isomorphic(s, t))
-    ListNode()
+    node5 = ListNode(5)
+    node4 = ListNode(4)
+    node3 = ListNode(3)
+    node2 = ListNode(2)
+    node1 = ListNode(1)
+    node1.next = node2
+    node2.next = node3
+    node3.next = node4
+    node4.next = node5
 
-    print(reverseList(lis))
+    newnode = reverseList(node1)
+    # newnode = node1
+    print(newnode.val)
+    while newnode.next is not None:
+        print(newnode.next.val)
+        newnode = newnode.next
 
+    print(isHappy(1111111))
 
 if __name__ == "__main__":
     main()
