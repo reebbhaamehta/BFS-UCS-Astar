@@ -85,18 +85,55 @@ def isHappy(n):
     """
     strn = str(n)
     temp = 0
+    seen = {}
     while True:
+        if temp in seen:
+            seen[temp] += 1
+            if int(temp) == 1:
+                return True
+            if seen[temp] > 1:
+                return False
+        else:
+            seen[temp] = 1
         temp = 0
+
         for i in strn:
-            temp = temp + int(i)**2
-            print(temp)
-        if int(temp) == 1:
-            return True
-        if int(temp) != 1 and len(str(temp)) == 1:
-            return False
+            temp = temp + int(i) ** 2
+        print(temp)
+
         strn = str(temp)
 
+    return False
 
+# Given a linked list, determine if it has a cycle in it.
+#
+# To represent a cycle in the given linked list, we use an
+# integer pos which represents the position (0-indexed) in
+# the linked list where tail connects to. If pos is -1,
+# then there is no cycle in the
+# linked list.
+#
+# Example 1:
+#
+# Input: head = [3,2,0,-4], pos = 1
+# Output: true
+# Explanation: There is a cycle in the linked list, where tail connects to the second node.
+# Example 2:
+#
+# Input: head = [1,2], pos = 0
+# Output: true
+# Explanation: There is a cycle in the linked list, where tail connects to the first node
+# Example 3:
+#
+# Input: head = [1], pos = -1
+# Output: false
+# Explanation: There is no cycle in the linked list.
+
+def hasCycle(head):
+    """
+    :type head: ListNode
+    :rtype: bool
+    """
 
 def main():
     s = 'apple'
