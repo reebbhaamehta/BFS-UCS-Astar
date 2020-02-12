@@ -333,9 +333,6 @@ for i in ch:
     else:
         channel_dict_node[pos_b] = [pos_a]
 
-print(channel_dict_node)
-print(channel_dict_global)
-
 st = time.time()
 if algorithm == "BFS":
     breadth_first(world, start, end, channel_dict_node)
