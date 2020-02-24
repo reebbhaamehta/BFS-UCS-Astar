@@ -4,60 +4,42 @@ import bisect
 import heapq
 
 
-def jaunt(channels, current_pos,
-          channel_dict):  # TODO check edge cases, what if two channels are specified twice; what if
-    jaunt_to = current_pos
-    jaunt_to_ = current_pos
-    poss_jaunts = channel_dict[current_pos[0]]
-    for i in poss_jaunts:
-        if current_pos[1] == i[1] and current_pos[2] == i[2]:
-            jaunt_to_ = list(i)
-    for i in channels:
-        if current_pos == [i[0], i[1], i[2]]:
-            jaunt_to = [i[3], i[1], i[2]]
-            break
-        elif current_pos == [i[3], i[1], i[2]]:
-            jaunt_to = [i[0], i[1], i[2]]
-            break
-    if jaunt_to_ != jaunt_to:
-        print(jaunt_to)
-        print(jaunt_to_)
-        exit()
-    return jaunt_to
-
-
 # TODO can the world grid size be 0 0? should probable avoid a crash anyway
-def next_position(world_grid, channels, current_pos, direction, channel_dict):
-    next_point = current_pos
-    if direction == 'North':
-        next_point = [current_pos[0], current_pos[1], current_pos[2] + 1]
-    elif direction == 'Northeast':
-        next_point = [current_pos[0], current_pos[1] + 1, current_pos[2] + 1]
-    elif direction == 'East':
-        next_point = [current_pos[0], current_pos[1] + 1, current_pos[2]]
-    elif direction == 'Southeast':
-        next_point = [current_pos[0], current_pos[1] + 1, current_pos[2] - 1]
-    elif direction == 'South':
-        next_point = [current_pos[0], current_pos[1], current_pos[2] - 1]
-    elif direction == 'Southwest':
-        next_point = [current_pos[0], current_pos[1] - 1, current_pos[2] - 1]
-    elif direction == 'West':
-        next_point = [current_pos[0], current_pos[1] - 1, current_pos[2]]
-    elif direction == 'Northwest':
-        next_point = [current_pos[0], current_pos[1] - 1, current_pos[2] + 1]
-    elif direction == 'Jaunt':
-        next_point = jaunt(channels, current_pos, channel_dict)
-    if next_point[1] >= len(world_grid):
-        next_point = current_pos
-    if next_point[2] >= len(world_grid[1]):
-        next_point = current_pos
-    if next_point[1] < 0:
-        next_point = current_pos
-    if next_point[2] < 0:
-        next_point = current_pos
-    return next_point
+
+#TODO check channel dictionary and its uses. The incorrect assumption:
+# is that my channel dictionary will give me all the jaunts for the current year
 
 
+def actions_available(world_grid, current_pos, node_channel):
+    north = [current_pos[0], current_pos[1], current_pos[2] + 1]
+    northeast = [current_pos[0], current_pos[1] + 1, current_pos[2] + 1]
+    east = [current_pos[0], current_pos[1] + 1, current_pos[2]]
+    southeast = [current_pos[0], current_pos[1] + 1, current_pos[2] - 1]
+    south = [current_pos[0], current_pos[1], current_pos[2] - 1]
+    southwest = [current_pos[0], current_pos[1] - 1, current_pos[2] - 1]
+    west = [current_pos[0], current_pos[1] - 1, current_pos[2]]
+    northwest = [current_pos[0], current_pos[1] - 1, current_pos[2] + 1]
+
+    action_list = [north, northeast, east, southeast, south, southwest, west, northwest]
+
+    if tuple(current_pos) in node_channel:
+        jaunts = node_channel[tuple(current_pos)]
+        for i in jaunts:
+            action_list.append(i)
+    for i in range(len(action_list)):
+        if action_list[i][1] >= len(world_grid):
+            action_list[i] = current_pos
+        if action_list[i][2] >= len(world_grid[1]):
+            action_list[i] = current_pos
+        if action_list[i][1] < 0:
+            action_list[i] = current_pos
+        if action_list[i][2] < 0:
+            action_list[i] = current_pos
+
+    return action_list
+
+
+# @profile
 def find_path(tree, child):
     curr_parent = child
     path = list()
@@ -69,10 +51,8 @@ def find_path(tree, child):
     return path
 
 
-# TODO: Only explore a world/ only jaunt to a position if the goal could be found at the end of it.
-#  make a jaunt action cost if there is no path, much more expensive
-
-def calculate_heuristic(end_state, current_state, channel_dict, explored_years, year_dict):
+# @profile
+def calculate_heuristic(end_state, current_state, channel_dict, year_dict):
     current_cost = current_state[1]
     curr_year = current_state[0][0]
     curr_x = current_state[0][1]
@@ -80,17 +60,16 @@ def calculate_heuristic(end_state, current_state, channel_dict, explored_years, 
     jaunt_costs = [9999999]
     if end_state[0] == curr_year:
         estimated_future_cost = ((curr_x - end_state[1]) ** 2 + (curr_y - end_state[2]) ** 2) ** 0.5
-    elif curr_year in channel_dict:
-        for jaunts in channel_dict[curr_year]: # for all jaunts find the distance to the closest jaunt location
+    elif curr_year in channel_dict:  # if the goal is not in the current year but is in the path check if the current year is in the path
+        for jaunts in channel_dict[curr_year]:  # for all jaunts find the distance to the closest jaunt location
+            # if jaunts[0] not in explored_years:
             max_dist = (max(abs(curr_x - jaunts[1]), abs(curr_y - jaunts[2])))
             min_dist = (min(abs(curr_x - jaunts[1]), abs(curr_y - jaunts[2])))
-            jaunt_costs.append((14*min_dist)+(10*max_dist)+year_dict[curr_year])
+            jaunt_costs.append((14 * min_dist) + (10 * (max_dist - min_dist)) + year_dict[curr_year])
         estimated_future_cost = min(jaunt_costs)
     else:
         estimated_future_cost = 99999999
     fn = current_cost + estimated_future_cost
-    # fn = estimated_future_cost
-    # print(fn)
     return fn
 
 
@@ -126,41 +105,42 @@ def add_node(pq, node, pq_dict):
     heapq.heappush(pq, node)
 
 
-def assign_costs_years(channel_dict, end_year):
+# @profile
+#TODO: NEED TO KEEP TRACK OF THE PARENT
+def assign_costs_years(channel_dict, end_year, node_channel):
     unvisited = []
     year_cost = {}
-    for channel in channel_dict:
-        if channel == end_year:
+    for channel in node_channel:
+        if channel[0] == end_year:
             cost = 0
-            parent = None
         else:
             cost = 9999999
-            parent = None
-        unvisited.append([cost, channel, parent])
-        year_cost[channel] = cost
+        unvisited.append([cost, channel])
+        year_cost[channel[0]] = cost
     unvisited.sort()
     while len(unvisited) != 0:
         current = unvisited[0]
         del unvisited[0]
-        children = channel_dict[current[1]]
-        # in children find
+        children = node_channel[current[1]]
         for child in children:
-            dist_to_jaunt = 0
-            cost = abs(child[0] - current[1]) + dist_to_jaunt  # + cost to get to the jaunt
-            child_q = [cost + current[0], child[0]]
-            if year_cost[child_q[1]] >= 9999999:
-                year_cost[child_q[1]] = child_q[0]
-            y_unvisit = [i[1] for i in unvisited]
-            if child_q[1] in y_unvisit:
-                index = y_unvisit.index(child_q[1])
+            cost = abs(child[0] - current[1][0])
+            child_q = [cost + current[0], child]
+            print(child_q)
+            if year_cost[child_q[1][0]] > child_q[0]:  # 9999999:
+                year_cost[child_q[1][0]] = child_q[0]
+            y_unvisit = [i[1][0] for i in unvisited]
+            if child_q[1][0] in y_unvisit:
+                index = y_unvisit.index(child_q[1][0])
                 if child_q[0] < unvisited[index][0]:
-                    year_cost[child_q[1]] = child_q[0] #  set parent
+                    year_cost[child_q[1][0]] = child_q[0]
                     unvisited[index][0] = child_q[0]
                     unvisited.sort()
+    print(year_cost)
     return year_cost
 
 
-def breadth_first(world_grid, channels, start_state, end_state, channel_dict):
+# @profile
+def breadth_first(world_grid, start_state, end_state, node_channel):
     cost = 0
     frontier = deque([])
     node = [[int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
@@ -172,7 +152,7 @@ def breadth_first(world_grid, channels, start_state, end_state, channel_dict):
     frontier.appendleft(node)
     frontier_nodes.append(node[0])
     explored = []
-    actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
+    # actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
         if len(frontier) == 0:
             print("FAIL len(explored) = {}".format(len(explored)))
@@ -180,9 +160,9 @@ def breadth_first(world_grid, channels, start_state, end_state, channel_dict):
         curr_node = frontier.pop()
         frontier_nodes.pop(0)
         bisect.insort(explored, curr_node[0])
+        actions = actions_available(world_grid, curr_node[0], node_channel)
         for action in actions:
-            child = [next_position(world_grid, channels, curr_node[0], action, channel_dict),
-                     curr_node[1] + 1]
+            child = [action, curr_node[1] + 1]
             if child[0] not in frontier_nodes and get_index(explored, child[0]) < 0:
                 tree[str(child)] = curr_node
                 if child[0] == end_state:
@@ -193,9 +173,7 @@ def breadth_first(world_grid, channels, start_state, end_state, channel_dict):
                 frontier_nodes.append(child[0])
 
 
-# TODO: debug UCS and A* to see why they are visiting more nodes than BFS and therefore taking more time.
-#  I dont think I am checking for removed nodes before poping them from pq. And I probably should be
-def uniform_cost(world_grid, channels, start_state, end_state, channel_dict):
+def uniform_cost(world_grid, start_state, end_state, node_channel):
     cost = 0
     counter = 0
     node = [cost, counter, [int(start_state[0]), int(start_state[1]), int(start_state[2])]]
@@ -205,7 +183,6 @@ def uniform_cost(world_grid, channels, start_state, end_state, channel_dict):
     heap_dict = {}
     removed = []
     add_node(pq, node, heap_dict)
-    actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
         if len(heap_dict) == 0:
             out_node = [curr_node[2], curr_node[0]]
@@ -217,19 +194,20 @@ def uniform_cost(world_grid, channels, start_state, end_state, channel_dict):
         else:
             heapq.heappop(pq)
             continue
-        # print('pq = {}'.format(pq))
         if curr_node[2] == end_state:
             out_node = [curr_node[2], curr_node[0]]
             path = find_path(tree, out_node)
             print(len(explored))
             return create_output(out_node, path)
         bisect.insort(explored, curr_node[2])
+        actions = actions_available(world_grid, curr_node[2], node_channel)
         for action in actions:
-            next_node = next_position(world_grid, channels, curr_node[2], action, channel_dict)
-            if action == 'North' or action == 'South' or action == 'East' or action == 'West':
-                cost = 10
-            elif action == 'Jaunt':
+            next_node = action
+            if next_node[0] != curr_node[2][0]:  # action == 'Jaunt':
                 cost = abs(next_node[0] - curr_node[2][0])
+            # action == 'North' or action == 'South' or action == 'East' or action == 'West':
+            elif next_node[1] == curr_node[2][1] or next_node[2] == curr_node[2][2]:
+                cost = 10
             else:
                 cost = 14
             counter += 1
@@ -247,16 +225,15 @@ def uniform_cost(world_grid, channels, start_state, end_state, channel_dict):
                         bisect.insort(removed, curr_node[2])
 
 
-def a_star(world_grid, channels, start_state, end_state, channel_dict):
+# @profile
+def a_star(world_grid, start_state, end_state, channel_dict, node_channel):
     cost, fn, counter = 0, 0, 0
     node = [fn, counter, [int(start_state[0]), int(start_state[1]), int(start_state[2])], cost]
     tree = {str([node[2], node[3]]): [None]}
-    explored, pq, explored_years = [], [], set()
+    explored, pq = [], []
     pq_dict = {}
     add_node(pq, node, pq_dict)
-    actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
-    year_dict = assign_costs_years(channel_dict, end_state[0])
-    # print(year_dict)
+    year_dict = assign_costs_years(channel_dict, end_state[0], node_channel)
     while True:
         if len(pq_dict) == 0:
             out_node = [curr_node[2], curr_node[3]]
@@ -268,26 +245,25 @@ def a_star(world_grid, channels, start_state, end_state, channel_dict):
         else:
             heapq.heappop(pq)
             continue
-        # print(curr_node)
-
         if curr_node[2] == end_state:
             out_node = [curr_node[2], curr_node[3]]
             path = find_path(tree, out_node)
             print(len(explored))
             return create_output(out_node, path)
         bisect.insort(explored, curr_node[2])
-        explored_years.add(curr_node[2][0])
+        actions = actions_available(world_grid, curr_node[2], node_channel)
         for action in actions:
-            next_node = next_position(world_grid, channels, curr_node[2], action, channel_dict)
-            if action == 'North' or action == 'South' or action == 'East' or action == 'West':
-                cost = 10
-            elif action == 'Jaunt':
+            next_node = action
+            if next_node[0] != curr_node[2][0]:  # action == 'Jaunt':
                 cost = abs(next_node[0] - curr_node[2][0])
+            # action == 'North' or action == 'South' or action == 'East' or action == 'West':
+            elif next_node[1] == curr_node[2][1] or next_node[2] == curr_node[2][2]:
+                cost = 10
             else:
                 cost = 14
             counter += 1
             child = [fn, counter, next_node, curr_node[3] + cost]
-            fn = calculate_heuristic(end_state, [child[2], child[3], child[0]], channel_dict, explored_years, year_dict)
+            fn = calculate_heuristic(end_state, [child[2], child[3], child[0]], channel_dict, year_dict)
             child = [fn, counter, next_node, curr_node[3] + cost]
             if tuple(child[2]) not in pq_dict and get_index(explored, child[2]) < 0:
                 add_node(pq, child, pq_dict)
@@ -329,7 +305,7 @@ while i < no_channels:
     i = i + 1
 
 channel_dict_global = {}
-curr_jaunt = []
+
 for i in ch:
     if i[0] in channel_dict_global:
         channel_dict_global[i[0]].append((i[3], i[1], i[2]))
@@ -340,11 +316,30 @@ for i in ch:
     else:
         channel_dict_global[i[3]] = [(i[0], i[1], i[2])]
 
+channel_dict_node = {}
+
+for i in ch:
+    pos_a = tuple([i[0], i[1], i[2]])
+    pos_b = [i[3], i[1], i[2]]
+
+    if pos_a in channel_dict_node:
+        channel_dict_node[pos_a].append(pos_b)
+    else:
+        channel_dict_node[pos_a] = [pos_b]
+
+for i in ch:
+    pos_a = [i[0], i[1], i[2]]
+    pos_b = tuple([i[3], i[1], i[2]])
+    if pos_b in channel_dict_node:
+        channel_dict_node[pos_b].append(pos_a)
+    else:
+        channel_dict_node[pos_b] = [pos_a]
+
 st = time.time()
 if algorithm == "BFS":
-    breadth_first(world, ch, start, end, channel_dict_global)
+    breadth_first(world, start, end, channel_dict_node)
 elif algorithm == "UCS":
-    uniform_cost(world, ch, start, end, channel_dict_global)
+    uniform_cost(world, start, end, channel_dict_node)
 elif algorithm == "A*":
-    a_star(world, ch, start, end, channel_dict_global)
+    a_star(world, start, end, channel_dict_global, channel_dict_node)
 print("it took {}".format(time.time() - st))
