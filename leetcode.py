@@ -21,6 +21,7 @@ def is_isomorphic(s, t):
     else:
         return False
 
+
 # https://leetcode.com/problems/reverse-linked-list/
 # Definition for singly-linked list.
 class ListNode(object):
@@ -46,6 +47,7 @@ def reverseList(head):
         next_node = next_next
     return current_node
 
+
 # Given an array of integers, find if the array contains any duplicates.
 # Your function should return true if any value appears at least twice
 # in the array, and it should return false if every element is distinct.
@@ -62,6 +64,7 @@ def containsDuplicate(nums):
         else:
             nums_dict[i] = 1
     return False
+
 
 # Write an algorithm to determine if a number is "happy".
 # A happy number is a number defined by the following process:
@@ -88,7 +91,7 @@ def isHappy(n):
     while True:
         temp = 0
         for i in strn:
-            temp = temp + int(i)**2
+            temp = temp + int(i) ** 2
             print(temp)
         if int(temp) == 1:
             return True
@@ -97,29 +100,76 @@ def isHappy(n):
         strn = str(temp)
 
 
+def romanToInt(s: str) -> int:
+    roman_int = {'I': 1,
+                 'V': 5,
+                 'X': 10,
+                 'L': 50,
+                 'C': 100,
+                 'D': 500,
+                 'M': 1000
+                 }
+    decimal = 0
+    for i in range(len(s)):
+        if i + 1 < len(s):
+            if roman_int[s[i]] < roman_int[s[i + 1]]:
+                decimal = decimal - roman_int[s[i]]
+            else:
+                decimal = decimal + roman_int[s[i]]
+        else:
+            decimal = decimal + roman_int[s[i]]
+    return decimal
+
+
+def numIslands(grid) -> int:
+    count, island = 0, 0
+
+    for i in range(len(grid)):
+        for j in range(len(grid[i])):
+            if grid[i][j] != grid[i][j + 1]:
+                count += 1
+            if grid[i][j] != grid[i][j - 1]:
+                count += 1
+            if grid[i][j] != grid[i + 1][j]:
+                count += 1
+            if grid[i][j] != grid[i - 1][j]:
+                count += 1
+            if count == 4:
+                island += 1
+    return island
+
 
 def main():
-    s = 'apple'
-    t = 'ellpa'
-    print(is_isomorphic(s, t))
-    node5 = ListNode(5)
-    node4 = ListNode(4)
-    node3 = ListNode(3)
-    node2 = ListNode(2)
-    node1 = ListNode(1)
-    node1.next = node2
-    node2.next = node3
-    node3.next = node4
-    node4.next = node5
+    # s = 'apple'
+    # t = 'ellpa'
+    # print(is_isomorphic(s, t))
+    # node5 = ListNode(5)
+    # node4 = ListNode(4)
+    # node3 = ListNode(3)
+    # node2 = ListNode(2)
+    # node1 = ListNode(1)
+    # node1.next = node2
+    # node2.next = node3
+    # node3.next = node4
+    # node4.next = node5
 
-    newnode = reverseList(node1)
+    # newnode = reverseList(node1)
     # newnode = node1
-    print(newnode.val)
-    while newnode.next is not None:
-        print(newnode.next.val)
-        newnode = newnode.next
+    # print(newnode.val)
+    # while newnode.next is not None:
+    #     print(newnode.next.val)
+    #     newnode = newnode.next
+    #
+    # print(isHappy(1111111))
+    print(romanToInt("MCMXC"))
+    # print(romanToInt("IV"))
+    grid = [["1", "1", "1", "1", "0"],
+            ["1", "1", "0", "1", "0"],
+            ["1", "1", "0", "0", "0"],
+            ["0", "0", "0", "0", "0"]]
+    print(grid[0][0])
+    print(numIslands(grid))
 
-    print(isHappy(1111111))
 
 if __name__ == "__main__":
     main()

@@ -132,7 +132,7 @@ def calculate_heuristic(end_state, current_state, channel_dict, explored_years, 
 
 
 def create_output(current_node, path):
-    file_output = open('output.txt', 'w')
+    file_output = open('output41-MINE.txt', 'w')
     if path == ['FAIL']:
         file_output.write('FAIL')
     else:
