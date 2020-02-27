@@ -1,13 +1,9 @@
+import filecmp
+import os.path
 from collections import deque
 import time
 import bisect
 import heapq
-
-
-# TODO can the world grid size be 0 0? should probable avoid a crash anyway
-
-# TODO check channel dictionary and its uses. The incorrect assumption:
-# is that my channel dictionary will give me all the jaunts for the current year
 
 
 def actions_available(world_grid, current_pos, node_channel):
@@ -74,7 +70,8 @@ def calculate_heuristic(end_state, current_state, channel_dict, year_dict):
 
 
 def create_output(current_node, path):
-    file_output = open('output.txt', 'w')
+    out_file = "output{}-MINE.txt".format(TEST_NUMBER)
+    file_output = open(out_file, 'w')
     if path == ['FAIL']:
         file_output.write('FAIL')
     else:
@@ -133,7 +130,6 @@ def assign_costs_years(channel_dict, end_year):
                     year_cost[child_q[1]] = child_q[0]
                     unvisited[index][0] = child_q[0]
                     unvisited.sort()
-    print(year_cost)
     return year_cost
 
 
@@ -150,7 +146,6 @@ def breadth_first(world_grid, start_state, end_state, node_channel):
     frontier.appendleft(node)
     frontier_nodes.append(node[0])
     explored = []
-    # actions = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest', 'Jaunt']
     while True:
         if len(frontier) == 0:
             print("FAIL len(explored) = {}".format(len(explored)))
@@ -171,7 +166,6 @@ def breadth_first(world_grid, start_state, end_state, node_channel):
                 frontier_nodes.append(child[0])
 
 
-#  TODO: I dont think I am checking for removed nodes before poping them from pq. And I probably should be
 def uniform_cost(world_grid, start_state, end_state, node_channel):
     cost = 0
     counter = 0
@@ -255,7 +249,6 @@ def a_star(world_grid, start_state, end_state, channel_dict, node_channel):
             next_node = action
             if next_node[0] != curr_node[2][0]:  # action == 'Jaunt':
                 cost = abs(next_node[0] - curr_node[2][0])
-            # action == 'North' or action == 'South' or action == 'East' or action == 'West':
             elif next_node[1] == curr_node[2][1] or next_node[2] == curr_node[2][2]:
                 cost = 10
             else:
@@ -275,70 +268,106 @@ def a_star(world_grid, start_state, end_state, channel_dict, node_channel):
                         add_node(pq, child, pq_dict)
 
 
-file_Input = open("input.txt")
-lines = file_Input.readlines()
-file_Input.close()
+def run_search(file_in):
+    file_Input = open(file_in)
+    lines = file_Input.readlines()
+    file_Input.close()
 
-algorithm = lines[0].strip()
-grid = lines[1].split()
-width = int(grid[0])
-height = int(grid[1])
+    algorithm = lines[0].strip()
+    grid = lines[1].split()
+    width = int(grid[0])
+    height = int(grid[1])
 
-world = [[j for j in range(height)] for i in range(width)]
+    world = [[j for j in range(height)] for i in range(width)]
 
-start = lines[2].rstrip().split()
-start = [int(i) for i in start]
+    start = lines[2].rstrip().split()
+    start = [int(i) for i in start]
 
-end = lines[3].rstrip().split()
-end = [int(i) for i in end]
+    end = lines[3].rstrip().split()
+    end = [int(i) for i in end]
 
-no_channels = int(lines[4].rstrip())
+    no_channels = int(lines[4].rstrip())
 
-i = 0
-ch = list()
+    i = 0
+    ch = list()
 
-while i < no_channels:
-    single_channel = lines[5 + i].split()
-    single_channel = [int(m) for m in single_channel]
-    ch.append(single_channel)
-    i = i + 1
+    while i < no_channels:
+        single_channel = lines[5 + i].split()
+        single_channel = [int(m) for m in single_channel]
+        ch.append(single_channel)
+        i = i + 1
 
-channel_dict_global = {}
+    channel_dict_global = {}
 
-for i in ch:
-    if i[0] in channel_dict_global:
-        channel_dict_global[i[0]].append((i[3], i[1], i[2]))
-    else:
-        channel_dict_global[i[0]] = [(i[3], i[1], i[2])]
-    if i[3] in channel_dict_global:
-        channel_dict_global[i[3]].append((i[0], i[1], i[2]))
-    else:
-        channel_dict_global[i[3]] = [(i[0], i[1], i[2])]
+    for i in ch:
+        if i[0] in channel_dict_global:
+            channel_dict_global[i[0]].append((i[3], i[1], i[2]))
+        else:
+            channel_dict_global[i[0]] = [(i[3], i[1], i[2])]
+        if i[3] in channel_dict_global:
+            channel_dict_global[i[3]].append((i[0], i[1], i[2]))
+        else:
+            channel_dict_global[i[3]] = [(i[0], i[1], i[2])]
 
-channel_dict_node = {}
+    channel_dict_node = {}
 
-for i in ch:
-    pos_a = tuple([i[0], i[1], i[2]])
-    pos_b = [i[3], i[1], i[2]]
+    for i in ch:
+        pos_a = tuple([i[0], i[1], i[2]])
+        pos_b = [i[3], i[1], i[2]]
 
-    if pos_a in channel_dict_node:
-        channel_dict_node[pos_a].append(pos_b)
-    else:
-        channel_dict_node[pos_a] = [pos_b]
+        if pos_a in channel_dict_node:
+            channel_dict_node[pos_a].append(pos_b)
+        else:
+            channel_dict_node[pos_a] = [pos_b]
 
-for i in ch:
-    pos_a = [i[0], i[1], i[2]]
-    pos_b = tuple([i[3], i[1], i[2]])
-    if pos_b in channel_dict_node:
-        channel_dict_node[pos_b].append(pos_a)
-    else:
-        channel_dict_node[pos_b] = [pos_a]
+    for i in ch:
+        pos_a = [i[0], i[1], i[2]]
+        pos_b = tuple([i[3], i[1], i[2]])
+        if pos_b in channel_dict_node:
+            channel_dict_node[pos_b].append(pos_a)
+        else:
+            channel_dict_node[pos_b] = [pos_a]
 
-st = time.time()
-if algorithm == "BFS":
-    breadth_first(world, start, end, channel_dict_node)
-elif algorithm == "UCS":
-    uniform_cost(world, start, end, channel_dict_node)
-elif algorithm == "A*":
-    a_star(world, start, end, channel_dict_global, channel_dict_node)
-print("it took {}".format(time.time() - st))
+    st = time.time()
+    if algorithm == "BFS":
+        breadth_first(world, start, end, channel_dict_node)
+    elif algorithm == "UCS":
+        uniform_cost(world, start, end, channel_dict_node)
+    elif algorithm == "A*":
+        a_star(world, start, end, channel_dict_global, channel_dict_node)
+    print("it took {}".format(time.time() - st))
+
+
+# def run_tests():
+
+
+# def check_correctness():
+
+if __name__ == "__main__":
+    for TEST_NUMBER in range(11, 51):
+        print("--------------------------------------------------------------------------")
+        file_in = "input{}.txt".format(TEST_NUMBER)
+        # result = filecmp.cmp("output1-MINE.txt", "output{}.txt".format(i))
+        out = "output{}-MINE.txt".format(TEST_NUMBER)
+        bm = "output{}.txt".format(TEST_NUMBER)
+
+        if not os.path.isfile(out):
+            run_search(file_in)
+
+        with open(out) as f:
+            line1 = f.readline()
+            line2 = f.readline()
+        with open(bm) as f:
+            line1_bm = f.readline()
+            line2_bm = f.readline()
+        if line1 == line1_bm and line2 == line2_bm:
+            result = "PASS"
+        else:
+            result = "FAIL"
+        print("{}".format(result), "Test case {}".format(TEST_NUMBER))
+        result = filecmp.cmp("output{}-MINE.txt".format(TEST_NUMBER), "output{}.txt".format(TEST_NUMBER))
+        if result:
+            print("PASS: MATCHES OPTIMAL PATH FOUND BY TA")
+        else:
+            print("FAIL: DOES NOT MATCH OPTIMAL PATH FOUND BY TA")
+        print("--------------------------------------------------------------------------")
