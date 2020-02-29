@@ -192,6 +192,8 @@ def uniform_cost(world_grid, start_state, end_state, node_channel):
             path = find_path(tree, out_node)
             print(len(explored))
             return create_output(out_node, path)
+        print(curr_node)
+
         bisect.insort(explored, curr_node[2])
         actions = actions_available(world_grid, curr_node[2], node_channel)
         for action in actions:
@@ -344,7 +346,7 @@ def run_search(file_in):
 # def check_correctness():
 
 if __name__ == "__main__":
-    for TEST_NUMBER in range(11, 51):
+    for TEST_NUMBER in range(10, 30):
         print("--------------------------------------------------------------------------")
         file_in = "input{}.txt".format(TEST_NUMBER)
         # result = filecmp.cmp("output1-MINE.txt", "output{}.txt".format(i))

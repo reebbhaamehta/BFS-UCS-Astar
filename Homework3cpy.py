@@ -1,4 +1,5 @@
 import filecmp
+import os.path
 from collections import deque
 import time
 import bisect
@@ -69,7 +70,8 @@ def calculate_heuristic(end_state, current_state, channel_dict, year_dict):
 
 
 def create_output(current_node, path):
-    file_output = open('output.txt', 'w')
+    out_file = "output{}-MINE.txt".format(TEST_NUMBER)
+    file_output = open(out_file, 'w')
     if path == ['FAIL']:
         file_output.write('FAIL')
     else:
@@ -190,6 +192,8 @@ def uniform_cost(world_grid, start_state, end_state, node_channel):
             path = find_path(tree, out_node)
             print(len(explored))
             return create_output(out_node, path)
+        print(curr_node)
+
         bisect.insort(explored, curr_node[2])
         actions = actions_available(world_grid, curr_node[2], node_channel)
         for action in actions:
@@ -326,6 +330,11 @@ def run_search(file_in):
         else:
             channel_dict_node[pos_b] = [pos_a]
 
+    explored_dict = {}
+    num_worlds = 1
+
+    explored_dict[False for i in worlds]
+
     st = time.time()
     if algorithm == "BFS":
         breadth_first(world, start, end, channel_dict_node)
@@ -336,22 +345,36 @@ def run_search(file_in):
     print("it took {}".format(time.time() - st))
 
 
-i = 38
-if i == 38:
-    file_in = "input{}.txt".format(i)
-    run_search(file_in)
-    pf = filecmp.cmp("output.txt", "output{}.txt".format(i))
-    # out = "output.txt"
-    # bm = "output{}.txt".format(i)
-    # with open(out) as f:
-    #     line1 = f.readline()
-    #     line2 = f.readline()
-    # with open(bm) as f:
-    #     line1_bm = f.readline()
-    #     line2_bm = f.readline()
-    if pf:
-        result = "PASS"
-    else:
-        result = "FAIL"
+# def run_tests():
 
-    print("{}".format(result), "Test case {}".format(i))
+
+# def check_correctness():
+
+if __name__ == "__main__":
+    for TEST_NUMBER in range(10, 30):
+        print("--------------------------------------------------------------------------")
+        file_in = "input{}.txt".format(TEST_NUMBER)
+        # result = filecmp.cmp("output1-MINE.txt", "output{}.txt".format(i))
+        out = "output{}-MINE.txt".format(TEST_NUMBER)
+        bm = "output{}.txt".format(TEST_NUMBER)
+
+        if not os.path.isfile(out):
+            run_search(file_in)
+
+        with open(out) as f:
+            line1 = f.readline()
+            line2 = f.readline()
+        with open(bm) as f:
+            line1_bm = f.readline()
+            line2_bm = f.readline()
+        if line1 == line1_bm and line2 == line2_bm:
+            result = "PASS"
+        else:
+            result = "FAIL"
+        print("{}".format(result), "Test case {}".format(TEST_NUMBER))
+        result = filecmp.cmp("output{}-MINE.txt".format(TEST_NUMBER), "output{}.txt".format(TEST_NUMBER))
+        if result:
+            print("PASS: MATCHES OPTIMAL PATH FOUND BY TA")
+        else:
+            print("FAIL: DOES NOT MATCH OPTIMAL PATH FOUND BY TA")
+        print("--------------------------------------------------------------------------")
